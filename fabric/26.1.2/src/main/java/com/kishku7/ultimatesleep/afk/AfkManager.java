@@ -13,13 +13,17 @@ import java.util.UUID;
 /**
  * Tracks which players are AFK.
  *
- * Auto-AFK: a player is considered AFK after {@code afk_threshold_seconds} with
- * no change in position or look direction. Manual AFK: a player (or our /afk
- * command, when active) toggles AFK explicitly; any movement clears both the
- * auto and manual flags.
+ * Auto-AFK: a player is considered AFK after {@code afk_threshold_seconds} with no change in
+ * position or look direction. Manual AFK: a player (or our /afk command, or an admin via
+ * /usleep admin afk) toggles/sets it explicitly.
  *
- * State is rebuilt against the currently-online players each tick, so logged-off
- * players are dropped automatically.
+ * Cancellation rule (Dave 2026-06-20): any NON-bed movement cancels AFK. Being in a bed /
+ * sleeping does NOT cancel it -- so while a player is sleeping we skip the movement check
+ * entirely, and AFK persists. (TODO: also exempt the movement caused by auto-sleep moving a
+ * player into a bed, once auto-sleep is implemented.)
+ *
+ * State is rebuilt against the currently-online players each tick, so logged-off players are
+ * dropped automatically.
  */
 public final class AfkManager {
 
@@ -28,7 +32,7 @@ public final class AfkManager {
         float yaw, pitch;
         int lastActiveTick;
         boolean auto;    // set by the idle timer
-        boolean manual;  // toggled explicitly
+        boolean manual;  // toggled/set explicitly
 
         boolean afk() { return auto || manual; }
     }
@@ -52,6 +56,11 @@ public final class AfkManager {
             UUID id = p.getUUID();
             online.add(id);
             State s = states.computeIfAbsent(id, k -> snapshot(new State(), p, now));
+
+            // Being in a bed / sleeping never cancels AFK -> skip the movement check while asleep.
+            if (p.isSleeping()) {
+                continue;
+            }
 
             boolean moved = p.getX() != s.x || p.getY() != s.y || p.getZ() != s.z
                     || p.getYRot() != s.yaw || p.getXRot() != s.pitch;
@@ -79,12 +88,23 @@ public final class AfkManager {
         return s != null && s.afk();
     }
 
+    private State stateFor(ServerPlayer p) {
+        int now = p.level().getServer() != null ? p.level().getServer().getTickCount() : 0;
+        return states.computeIfAbsent(p.getUUID(), k -> snapshot(new State(), p, now));
+    }
+
     /** Toggle manual AFK for a player. @return the resulting AFK state. */
     public boolean toggleManual(ServerPlayer p) {
-        MinecraftServer server = p.level().getServer();
-        int now = server != null ? server.getTickCount() : 0;
-        State s = states.computeIfAbsent(p.getUUID(), k -> snapshot(new State(), p, now));
+        State s = stateFor(p);
         s.manual = !s.manual;
+        return s.afk();
+    }
+
+    /** Explicitly set manual AFK for a player (used by /usleep admin afk). @return resulting AFK state. */
+    public boolean setManual(ServerPlayer p, boolean afk) {
+        State s = stateFor(p);
+        s.manual = afk;
+        if (!afk) s.auto = false;
         return s.afk();
     }
 

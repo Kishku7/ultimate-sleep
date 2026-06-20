@@ -15,17 +15,21 @@ import net.minecraft.server.permissions.Permissions;
 /**
  * The /usleep command tree.
  *
- *   /usleep status                    -- player-facing summary
- *   /usleep afk                       -- toggle your own AFK (always available)
- *   /usleep admin query               -- dump all settings + /afk owner (op level 2)
- *   /usleep admin set &lt;key&gt; &lt;value&gt;   -- change a setting (op level 2)
+ *   /usleep status                       -- short status line (any user)
+ *   /usleep query                        -- full settings dump + /afk owner (ANY user)
+ *   /usleep afk                          -- toggle your own AFK (any user)
+ *   /usleep admin set <key> <value>      -- change a setting (OP level 4)
+ *   /usleep admin afk <player>           -- force a player into AFK (OP level 4)
  *
- * Returns the registered /usleep root node so the standalone /afk alias can be
- * registered as a Brigadier redirect to the "afk" child (see AfkCommandManager).
+ * Permission tiers (FUNCTIONAL_SPEC.md section 2):
+ *   - status / query / afk + vote/auto commands: open to all.
+ *   - /usleep set ... (NOT yet wired): the "special permission" tier -- sleep-admin roster,
+ *     permission node, or op level 3 (COMMANDS_ADMIN). Roadmap step 2.
+ *   - /usleep admin ...: OP level 4 (COMMANDS_OWNER) ONLY -- the master tier; the only place
+ *     the sleep-admin roster will be managed.
  *
- * The future client admin panel drives this: on open it issues
- * "/usleep admin query" to learn the current settings and which mod owns the
- * /afk command, then sends "/usleep admin set &lt;key&gt; &lt;value&gt;" per change.
+ * Returns the registered /usleep root node so the standalone /afk alias can redirect to the
+ * "afk" child (see AfkCommandManager).
  */
 public final class UltimateSleepCommands {
 
@@ -34,14 +38,18 @@ public final class UltimateSleepCommands {
     public static LiteralCommandNode<CommandSourceStack> register(CommandDispatcher<CommandSourceStack> dispatcher) {
         return dispatcher.register(Commands.literal("usleep")
                 .then(Commands.literal("status").executes(UltimateSleepCommands::status))
+                .then(Commands.literal("query").executes(UltimateSleepCommands::query)) // all users
                 .then(Commands.literal("afk").executes(UltimateSleepCommands::toggleAfk))
                 .then(Commands.literal("admin")
-                        .requires(src -> src.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(Commands.literal("query").executes(UltimateSleepCommands::adminQuery))
+                        // OP level 4 only.
+                        .requires(src -> src.permissions().hasPermission(Permissions.COMMANDS_OWNER))
                         .then(Commands.literal("set")
                                 .then(Commands.argument("key", StringArgumentType.word())
                                         .then(Commands.argument("value", StringArgumentType.greedyString())
-                                                .executes(UltimateSleepCommands::adminSet))))));
+                                                .executes(UltimateSleepCommands::adminSet))))
+                        .then(Commands.literal("afk")
+                                .then(Commands.argument("player", StringArgumentType.word())
+                                        .executes(UltimateSleepCommands::adminAfk)))));
     }
 
     private static int status(CommandContext<CommandSourceStack> ctx) {
@@ -51,6 +59,19 @@ public final class UltimateSleepCommands {
                 "[Ultimate Sleep] enabled=" + UltimateSleep.settings().bool("enabled")
                         + ", required=" + UltimateSleep.settings().integer("required_sleep_percentage") + "%"
                         + ", AFK players=" + afkCount));
+        return 1;
+    }
+
+    /** Full settings dump -- available to ANY user so everyone can see how the mod is configured. */
+    private static int query(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        src.sendSystemMessage(Component.literal("[Ultimate Sleep] current settings:"));
+        for (Settings.Entry e : UltimateSleep.settings().all().values()) {
+            src.sendSystemMessage(Component.literal(
+                    "  " + e.key + " = " + e.get() + "  (" + e.type + ") - " + e.description));
+        }
+        src.sendSystemMessage(Component.literal(
+                "  /afk owner = " + UltimateSleep.afkCommands().ownerLabel()));
         return 1;
     }
 
@@ -66,18 +87,6 @@ public final class UltimateSleepCommands {
         return 1;
     }
 
-    private static int adminQuery(CommandContext<CommandSourceStack> ctx) {
-        CommandSourceStack src = ctx.getSource();
-        src.sendSystemMessage(Component.literal("[Ultimate Sleep] current settings:"));
-        for (Settings.Entry e : UltimateSleep.settings().all().values()) {
-            src.sendSystemMessage(Component.literal(
-                    "  " + e.key + " = " + e.get() + "  (" + e.type + ") - " + e.description));
-        }
-        src.sendSystemMessage(Component.literal(
-                "  /afk owner = " + UltimateSleep.afkCommands().ownerLabel()));
-        return 1;
-    }
-
     private static int adminSet(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         String key = StringArgumentType.getString(ctx, "key");
@@ -88,6 +97,22 @@ public final class UltimateSleepCommands {
             return 0;
         }
         src.sendSystemMessage(Component.literal("[Ultimate Sleep] set " + key + " = " + value));
+        return 1;
+    }
+
+    /** Force a named player into AFK (OP 4). Uses getPlayerByName (must be online). */
+    private static int adminAfk(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        String name = StringArgumentType.getString(ctx, "player");
+        ServerPlayer target = src.getServer() == null
+                ? null : src.getServer().getPlayerList().getPlayerByName(name);
+        if (target == null) {
+            src.sendSystemMessage(Component.literal("[Ultimate Sleep] player not found / offline: " + name));
+            return 0;
+        }
+        UltimateSleep.afk().setManual(target, true);
+        src.sendSystemMessage(Component.literal("[Ultimate Sleep] set " + name + " AFK."));
+        target.sendSystemMessage(Component.literal("[Ultimate Sleep] An admin set you AFK."));
         return 1;
     }
 }

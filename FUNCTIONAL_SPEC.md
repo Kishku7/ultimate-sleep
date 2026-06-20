@@ -12,18 +12,38 @@ mods (deduped into 52 features) are catalogued in `research/sleep_mods_feature_l
 
 ## 2. Command surface -- /usleep
 
-| Command | Perm | Purpose |
-|---------|------|---------|
-| `/usleep status` | any | Player-facing summary (mode, requirement, AFK count, active vote). |
-| `/usleep afk` | any | Toggle your own AFK. Always available regardless of who owns `/afk`. |
-| `/usleep auto` | any | Toggle auto-sleep for yourself (see section 9). |
-| `/usleep yes` | any | Vote YES in the active sleep vote (VOTE mode). |
-| `/usleep no` | any | Vote NO in the active sleep vote (VOTE mode). |
-| `/usleep admin query` | op 2 | Dump all settings + `/afk` owner. Panel reads this on open. |
-| `/usleep admin set <key> <value>` | op 2 | Change a setting. Panel writes through this. |
+### Player commands (all users)
+| command | purpose |
+|---------|---------|
+| `/usleep status` | short status line (mode, requirement, AFK count, active vote). |
+| `/usleep query` | full settings dump + /afk owner -- ANY user can see the config. |
+| `/usleep afk` | toggle your own AFK. |
+| `/usleep auto` | toggle auto-sleep for yourself (section 9). |
+| `/usleep yes` , `/usleep no` | vote in the active sleep vote (VOTE mode). |
 
-Standalone `/afk` is registered conditionally (section 5). Client vote-popup buttons call
-`/usleep yes` / `/usleep no`, so client and command paths are identical.
+### Config commands (tiered)
+| command | tier | purpose |
+|---------|------|---------|
+| `/usleep set <key> <value>` | special permission | everyday settings. NOT yet wired -- roadmap step 2. |
+| `/usleep admin set <key> <value>` | OP 4 | full settings authority. |
+| `/usleep admin afk <player>` | OP 4 | force a player into AFK. |
+| `/usleep admin set admin <player>` | OP 4 | designate a sleep-admin (planned). |
+| `/usleep admin remove admin <player>` , `list admins` | OP 4 | manage the roster (planned). |
+
+### Permission tiers
+Vanilla op levels map to the 26.x `Permissions` enum: MODERATOR=1, GAMEMASTER=2, ADMIN=3, OWNER=4.
+- Open (all users): `status`, `query`, `afk`, `auto`, `yes`, `no`.
+- `/usleep set` (special permission): a designated sleep-admin (treated as op level 3), a
+  permission node (`ultimatesleep.set` via fabric-permissions-api / LuckPerms, soft-dep), or
+  op level 3 (`COMMANDS_ADMIN`). Lets owners delegate day-to-day sleep config WITHOUT handing
+  out vanilla OP. (Not yet wired -- the scaffold currently exposes settings only via
+  `/usleep admin set`.)
+- `/usleep admin ...` (OP 4 / `COMMANDS_OWNER` ONLY): the master tier -- `admin set`,
+  `admin afk`, and the sleep-admin roster live here and nowhere else.
+
+Standalone `/afk` is a redirect alias to `/usleep afk`, registered only when no other mod
+already provides `/afk` (section 5). Client vote-popup buttons call `/usleep yes` / `/usleep no`
+(the popup ships in the deferred GUI phase; until then VOTE mode works fully via the commands).
 
 ## 3. Night-skip engine (core)
 
@@ -73,7 +93,7 @@ Granted on a successful sleep/skip. Three independent admin toggles, usable in a
 ## 5. AFK tracking + conditional /afk (scaffolded)
 
 `AfkManager`: auto-AFK after `afk_threshold_seconds` idle (no move/look), plus manual toggle;
-movement clears both. Feeds `exclude_afk_from_requirement` and the vote eligibility (AFK = no
+any NON-bed movement cancels AFK -- being in a bed / sleeping does NOT cancel it (auto-sleep movement also exempt -- TODO). AFK can also be set by an admin via /usleep admin afk <player>. Feeds `exclude_afk_from_requirement` and the vote eligibility (AFK = no
 vote/no popup).
 
 `AfkCommandManager`: at command registration, if another mod already provides `/afk` we stand
@@ -99,7 +119,7 @@ Somnia-style; perf-sensitive, hence the per-category scoping.
 
 ## 8. Admin panel (req 2 & 3) -- client, GUI phase
 
-Client GUI generated from the settings registry. On open: `/usleep admin query` (read settings
+Client GUI generated from the settings registry. On open: `/usleep query` (read settings
 + `/afk` owner) -> render controls grouped by category -> each change sends
 `/usleep admin set <key> <value>`. Deferred: NO GUI until every feature works via /usleep commands and the setting set is final (Dave 2026-06-20). Until then, the commands ARE the admin panel.
 
@@ -175,7 +195,7 @@ Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.
 ## 12. Roadmap / TODO
 
 1. [done] Scaffold: /usleep tree, AFK tracking, conditional /afk, settings registry, green build.
-2. Settings: add ENUM/STRING types + config-file persistence; expand to the section-10 set.
+2. Settings + permissions: add ENUM/STRING types + config-file persistence; expand to the section-10 set; wire the permission tiers (`/usleep query` open; `/usleep set` = sleep-admin/permission-node/op3; `/usleep admin ...` = op4 only) + persisted sleep-admin roster + fabric-permissions-api soft-dep.
 3. Night-skip engine: SIMPLE path (percentage + AFK exclusion) + skip_mode + preserve_weather.
 4. VOTE mode: server vote state machine (auto-start on first sleeper, 30s, bed=auto-yes,
    AFK = no vote/no popup, vote_pass_rule) + `/usleep yes|no`.

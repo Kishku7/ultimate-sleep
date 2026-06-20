@@ -16,13 +16,14 @@ mods (deduped into 52 features) are catalogued in `research/sleep_mods_feature_l
 |---------|------|---------|
 | `/usleep status` | any | Player-facing summary (mode, requirement, AFK count, active vote). |
 | `/usleep afk` | any | Toggle your own AFK. Always available regardless of who owns `/afk`. |
+| `/usleep auto` | any | Toggle auto-sleep for yourself (see section 9). |
 | `/usleep yes` | any | Vote YES in the active sleep vote (VOTE mode). |
 | `/usleep no` | any | Vote NO in the active sleep vote (VOTE mode). |
 | `/usleep admin query` | op 2 | Dump all settings + `/afk` owner. Panel reads this on open. |
 | `/usleep admin set <key> <value>` | op 2 | Change a setting. Panel writes through this. |
 
-Standalone `/afk` is registered conditionally (see section 4). The client vote GUI buttons
-call `/usleep yes` / `/usleep no`, so client and command paths are identical.
+Standalone `/afk` is registered conditionally (section 5). Client vote-popup buttons call
+`/usleep yes` / `/usleep no`, so client and command paths are identical.
 
 ## 3. Night-skip engine (core)
 
@@ -35,60 +36,86 @@ Driven by `requirement_mode`:
 ### VOTE mode
 - When the **first** player gets into a bed, a vote auto-starts (no one waits in bed alone).
 - Window = `vote_duration_seconds` (default 30).
-- Every online player votes:
+- Every **non-AFK** online player votes. AFK players get **no vote and no popup**.
   - Command path (works without the client): `/usleep yes` / `/usleep no`.
-  - Client path: a popup "Do you want to allow other players to sleep?" with Yea / Nay and a
-    countdown. Buttons call the same commands.
+  - Client path: popup "Do you want to allow other players to sleep?" with Yea / Nay + countdown.
+    Buttons call the commands.
 - **Getting into a bed during a vote** = auto-YES; that player's popup closes.
-- Outcome: if YES reaches `vote_pass_percentage` of eligible voters, the skip fires; otherwise
-  the vote fails and the night continues. AFK players are excluded from the eligible set.
+- Pass rule = `vote_pass_rule`, admin-selectable:
+  - `MAJORITY_CAST` -- simple majority of votes cast (yes > no).
+  - `PERCENT_CAST` -- YES reaches `vote_pass_percentage` of the votes cast.
+  - `MAJORITY_NON_AFK` -- majority of non-AFK votes (default).
 
 ### Skip behavior (admin-set; applies to whichever mode triggered the skip)
 - `skip_mode` = `INSTANT` (jump to morning) or `ACCELERATE` (time-lapse via
-  `accelerate_multiplier`). Tied to the requirement outcome -- it is *how* the triggered skip
-  is carried out.
+  `accelerate_multiplier`). It is *how* the triggered skip is carried out.
 - `preserve_weather` -- keep rain/storms across the skip.
 
-## 4. AFK tracking + conditional /afk (scaffolded)
+## 4. Rewards (admin picks; each independent) -- 1.0
+
+Granted on a successful sleep/skip. Three independent admin toggles, usable in any combination:
+- `reward_regeneration` -- Regeneration for `reward_regeneration_minutes` (default 5).
+- `reward_golden_carrot` -- give one golden carrot; **drops at the player's feet if the
+  inventory is full** (never lost).
+- `reward_speed_boost` -- +`reward_speed_boost_percent`% movement speed (default 25) for
+  `reward_speed_boost_minutes` (default 5).
+
+## 5. AFK tracking + conditional /afk (scaffolded)
 
 `AfkManager`: auto-AFK after `afk_threshold_seconds` idle (no move/look), plus manual toggle;
-movement clears both. Feeds `exclude_afk_from_requirement` and the vote's eligible-voter set.
+movement clears both. Feeds `exclude_afk_from_requirement` and the vote eligibility (AFK = no
+vote/no popup).
 
 `AfkCommandManager`: at command registration, if another mod already provides `/afk` we stand
 down and report the owner via `admin query` (exact owning mod id = TODO; currently "external").
 Else, if `provide_afk_command`, we register `/afk`. `/usleep afk` always works regardless.
 
-## 5. Sleeper visibility (feedback)
+## 6. Sleeper visibility (feedback)
 
-Players can always see who is sleeping / how the count or vote is going:
 - `show_sleepers_in_chat` -- chat/broadcast updates (also the no-client path).
 - `show_sleepers_on_vote_screen` -- live sleeper + tally list on the client vote popup.
 - `notify_wake` -- morning/wake broadcast.
 
-## 6. Rewards (admin picks) -- 1.0 module, design pending
+## 7. World progression while sleeping (admin master + categories) -- 1.0
 
-A reward is granted on a successful sleep/skip. Admin enables the module and selects which
-rewards apply. Starter menu (to confirm): heal, clear negative effects, short buff(s),
-food/saturation top-up. (See open decisions + roadmap.)
+Master `world_progression_enabled`, then per-category sub-toggles so admins scope the cost:
+- `progress_crops` -- crops AND plant/tree growth: saplings/tree growth, bamboo, sugar
+  cane/cactus, plus orphan-leaf decay (leaves decaying as they would after a tree is cut).
+- `progress_animal_husbandry` -- breeding cooldowns + baby-animal growth.
+- `progress_smelting` -- furnaces / smokers / blast furnaces.
+- `progress_despawn_timers` -- item/entity despawn timers advance.
 
-## 7. World progression while sleeping (admin toggle + categories) -- 1.0
-
-Master `world_progression_enabled`, then per-category sub-toggles so admins pick what advances
-during a skip. Proposed categories (to confirm): crops, animal husbandry (breeding + baby
-growth), smelting (furnaces/smokers/blast), despawn timers. Perf-sensitive -- categories let
-admins scope the cost. (Somnia-style; 9 mods in the survey.)
+Somnia-style; perf-sensitive, hence the per-category scoping.
 
 ## 8. Admin panel (req 2 & 3) -- client, GUI phase
 
 Client GUI generated from the settings registry. On open: `/usleep admin query` (read settings
 + `/afk` owner) -> render controls grouped by category -> each change sends
-`/usleep admin set <key> <value>`. Deferred until the setting set is final (it is now close).
+`/usleep admin set <key> <value>`. Deferred until the setting set is final.
 
-## 9. Settings registry (target for 1.0)
+## 9. Auto-sleep (default ON) -- 1.0
+
+Players opt in with `/usleep auto`. While opted in, at the vanilla earliest-sleepable time
+(dusk, ~tick 12542), the **server** injects a sleep request for them -- exactly as if they had
+right-clicked the bed -- provided they meet the conditions:
+- **(a)** within vanilla reach of their home bed (their spawn bed), OR
+- **(b)** carrying a sleeping bag (Travelers' Backpack soft-dependency: in inventory or in
+  the backpack), which lets them sleep where they are.
+
+If neither is met, they get a text notice explaining why:
+- "Not near your bed."
+- with Travelers' Backpack present: "Not near your bed, and you don't seem to have a sleeping
+  bag with you.."
+
+`auto_sleep_enabled` (server, **default true**) lets admins disable the whole feature; the
+per-player opt-in state is saved per player. Travelers' Backpack integration is a soft-dep
+(detected at runtime; the sleeping-bag path is simply unavailable if the mod is absent).
+
+## 10. Settings registry (target for 1.0)
 
 Typed registry; the scaffold ships BOOL/INT and a representative subset. 1.0 adds ENUM (and
-likely STRING) types + config-file persistence (both TODO). Groups: core, engine, accessibility,
-feedback, rewards, world-progression, afk.
+likely STRING) types + config-file persistence (both TODO). Groups: core, engine, rewards,
+feedback, world-progression, auto-sleep, afk.
 
 | key | type | default | group |
 |-----|------|---------|-------|
@@ -97,6 +124,7 @@ feedback, rewards, world-progression, afk.
 | required_sleep_percentage | int | 50 | engine |
 | exclude_afk_from_requirement | bool | true | engine |
 | vote_duration_seconds | int | 30 | engine |
+| vote_pass_rule | enum(MAJORITY_CAST,PERCENT_CAST,MAJORITY_NON_AFK) | MAJORITY_NON_AFK | engine |
 | vote_pass_percentage | int | 50 | engine |
 | skip_mode | enum(INSTANT,ACCELERATE) | INSTANT | engine |
 | accelerate_multiplier | int | 60 | engine |
@@ -108,21 +136,25 @@ feedback, rewards, world-progression, afk.
 | show_sleepers_in_chat | bool | true | feedback |
 | show_sleepers_on_vote_screen | bool | true | feedback |
 | notify_wake | bool | true | feedback |
-| rewards_enabled | bool | false | rewards |
-| reward_heal | bool | true | rewards |
-| reward_heal_half_hearts | int | 4 | rewards |
-| reward_clear_negative_effects | bool | false | rewards |
-| reward_buffs | bool | false | rewards |
-| reward_food | bool | false | rewards |
+| reward_regeneration | bool | false | rewards |
+| reward_regeneration_minutes | int | 5 | rewards |
+| reward_golden_carrot | bool | false | rewards |
+| reward_speed_boost | bool | false | rewards |
+| reward_speed_boost_percent | int | 25 | rewards |
+| reward_speed_boost_minutes | int | 5 | rewards |
 | world_progression_enabled | bool | false | world-progression |
 | progress_crops | bool | true | world-progression |
 | progress_animal_husbandry | bool | true | world-progression |
 | progress_smelting | bool | true | world-progression |
 | progress_despawn_timers | bool | false | world-progression |
+| auto_sleep_enabled | bool | true | auto-sleep |
 | afk_threshold_seconds | int | 180 | afk |
 | provide_afk_command | bool | true | afk |
 
-## 10. Version targeting
+(Per-player state -- AFK status, auto-sleep opt-in, home bed -- is runtime/player data, not in
+the global settings table.)
+
+## 11. Version targeting
 
 Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.json` declares
 `minecraft >=26.1 <26.3` so one jar loads on 26.1.x and 26.2.x. NeoForge + backports after 1.0.
@@ -130,30 +162,31 @@ Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.
 `src.getPlayer()`, `sendSystemMessage`. Watch the 26.2 client API delta (e.g.
 `Minecraft.setScreen` removed) when the GUI/vote-popup lands.
 
-## 11. Roadmap / TODO
+## 12. Roadmap / TODO
 
 1. [done] Scaffold: /usleep tree, AFK tracking, conditional /afk, settings registry, green build.
-2. Settings: add ENUM/STRING types + config-file persistence; expand to the section-9 set.
-3. Night-skip engine: SIMPLE (percentage) path with AFK exclusion + skip_mode (INSTANT/ACCELERATE)
-   + preserve_weather.
-4. VOTE mode: server vote state machine (auto-start on first sleeper, 30s window, bed=auto-yes,
-   eligible-voter set excludes AFK) + `/usleep yes|no`.
-5. Networking: clientbound start/update/end vote payloads; serverbound handled via the commands.
+2. Settings: add ENUM/STRING types + config-file persistence; expand to the section-10 set.
+3. Night-skip engine: SIMPLE path (percentage + AFK exclusion) + skip_mode + preserve_weather.
+4. VOTE mode: server vote state machine (auto-start on first sleeper, 30s, bed=auto-yes,
+   AFK = no vote/no popup, vote_pass_rule) + `/usleep yes|no`.
+5. Networking: clientbound start/update/end vote payloads; serverbound via the commands.
 6. Accessibility toggles (sleep anytime, ignore monsters, ignore bed-too-far, highlight mobs).
 7. Sleeper visibility (chat + vote-screen list) + wake broadcast.
-8. **Rewards module** (admin-selectable: heal / clear effects / buffs / food) -- ADDED per Dave 2026-06-20.
-9. **World progression while sleeping** (master + category toggles: crops / animal husbandry /
-   smelting / despawn timers) -- ADDED per Dave 2026-06-20.
-10. Client admin panel GUI (query -> render -> set) + the vote popup.
-11. Verify build green + smoketest on a 26.1.2 server; then 26.2 check. -> 1.0.
-12. Post-1.0: other loaders, backports, and the deferred "flavor" track (nightmares, dreams,
-    horror entity, deprivation, XP/gifts, sounds, etc. -- see PROPOSED_1.0.md).
+8. Rewards module: regeneration (5 min), golden carrot (drop-if-full), +25% speed -- each an
+   independent admin toggle.
+9. World progression: master + categories (crops incl. trees/bamboo/leaf-decay, animal
+   husbandry, smelting, despawn timers).
+10. Auto-sleep: per-player opt-in (`/usleep auto`), dusk auto-bed-use via server-injected
+    sleep, home-bed proximity OR Travelers' Backpack sleeping-bag check, miss notifications,
+    default ON. (soft-dep: Travelers' Backpack.)
+11. Client admin panel GUI (query -> render -> set) + the vote popup.
+12. Verify build green + smoketest on a 26.1.2 server; then 26.2 check. -> 1.0.
+13. Post-1.0: other loaders, backports, deferred "flavor" track (nightmares, dreams, horror
+    entity, deprivation, XP/gifts, sounds, etc. -- see PROPOSED_1.0.md).
 
 ## Open decisions (small)
 
-- Rewards menu: confirm the 1.0 reward set (heal, clear-negative-effects, buff(s), food). Which
-  buffs, if any, for 1.0?
-- World-progression categories: confirm the 1.0 list (crops, animal husbandry, smelting, despawn
-  timers) -- add/remove any?
-- Vote pass rule: simple majority of votes cast, or `vote_pass_percentage` of eligible players
-  (current draft)?
+- Auto-sleep dusk time: use the vanilla earliest-sleepable tick (~12542), or expose it as a
+  configurable setting?
+- Speed-boost reward duration default 5 min (matching regen) ok? Regen amplifier = Regen I?
+- Crops category: keep sugar cane / cactus growth included (currently yes)?

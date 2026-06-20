@@ -29,9 +29,19 @@ Standalone `/afk` is registered conditionally (section 5). Client vote-popup but
 
 Driven by `requirement_mode`:
 
-### SIMPLE mode (percentage)
-- A skip fires when the sleeping fraction of eligible players reaches
-  `required_sleep_percentage`. AFK players are excluded when `exclude_afk_from_requirement`.
+### SIMPLE mode (percentage) -- vanilla-like, NO voting
+- Mirrors vanilla `playersSleepingPercentage`: a skip fires when the number of sleeping
+  eligible players reaches the required count. The percentage is the same number players
+  know from the vanilla gamerule -- an admin setting "simple 50" is effectively
+  `/gamerule playersSleepingPercentage 50`.
+- Implemented by us (not just by setting the gamerule) so we can layer on AFK exclusion
+  (`exclude_afk_from_requirement`), `skip_mode`, `preserve_weather`, and the messaging below.
+- Required count = ceil(percentage/100 * eligible players); eligible excludes AFK when
+  enabled. Example: 4 online at 50% -> 2 required.
+- No voting -- instead, richer shared status. When `show_sleepers_in_chat` is on, each time a
+  player starts/stops sleeping everyone is told the state, e.g.:
+    So_and_so is sleeping, 1 of 2 players required to sleep, 1 more required.
+  When the required count is met the skip fires (per `skip_mode`).
 
 ### VOTE mode
 - When the **first** player gets into a bed, a vote auto-starts (no one waits in bed alone).
@@ -190,3 +200,4 @@ Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.
   configurable setting?
 - Speed-boost reward duration default 5 min (matching regen) ok? Regen amplifier = Regen I?
 - Crops category: keep sugar cane / cactus growth included (currently yes)?
+- Config command grammar: keep generic `/usleep admin set <key> <value>` (the GUI uses it) and ALSO add friendly verbs like `/usleep admin set sleep simple <pct>` / `... sleep vote`? (Your example used `/usleep set sleep simple 50`.)

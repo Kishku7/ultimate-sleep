@@ -192,6 +192,20 @@ Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.
 `src.getPlayer()`, `sendSystemMessage`. Watch the 26.2 client API delta (e.g.
 `Minecraft.setScreen` removed) when the GUI/vote-popup lands.
 
+## Build status (2026-06-20)
+
+0.1.0 builds GREEN and SMOKETESTED on a Fabric 26.1 server (clean boot, no errors).
+Verified live: mod init, /usleep status + query, /afk redirect alias, sleep-admin roster
+add/list + JSON persistence, and SIMPLE mode applying `gamerule playersSleepingPercentage 50`
+on start.
+
+IMPLEMENTED: settings (full section-10 set, ENUM type, JSON persistence), permission tiers
+(`/usleep set` op2/sleep-admin, `/usleep admin ...` op3/sleep-admin) + persisted sleep-admin
+roster, AFK tracking + `/afk` alias + `/usleep admin afk`, SIMPLE-mode gamerule drive +
+per-sleeper broadcasts.
+PENDING: AFK-excluded requirement, ACCELERATE, preserve_weather, VOTE mode + networking,
+rewards, world-progression, auto-sleep, accessibility toggles, GUI.
+
 ## 12. Roadmap / TODO
 
 1. [done] Scaffold: /usleep tree, AFK tracking, conditional /afk, settings registry, green build.

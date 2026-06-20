@@ -1,0 +1,5 @@
+fabric/**/.gradle/
+fabric/**/build/
+fabric/**/run/
+*.class
+.DS_Store

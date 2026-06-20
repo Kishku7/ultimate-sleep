@@ -39,7 +39,7 @@ Driven by `requirement_mode`:
 - Every **non-AFK** online player votes. AFK players get **no vote and no popup**.
   - Command path (works without the client): `/usleep yes` / `/usleep no`.
   - Client path: popup "Do you want to allow other players to sleep?" with Yea / Nay + countdown.
-    Buttons call the commands.
+    Buttons call the commands. (The popup ships in the deferred GUI phase; until then VOTE mode works fully via /usleep yes|no.)
 - **Getting into a bed during a vote** = auto-YES; that player's popup closes.
 - Pass rule = `vote_pass_rule`, admin-selectable:
   - `MAJORITY_CAST` -- simple majority of votes cast (yes > no).
@@ -91,7 +91,7 @@ Somnia-style; perf-sensitive, hence the per-category scoping.
 
 Client GUI generated from the settings registry. On open: `/usleep admin query` (read settings
 + `/afk` owner) -> render controls grouped by category -> each change sends
-`/usleep admin set <key> <value>`. Deferred until the setting set is final.
+`/usleep admin set <key> <value>`. Deferred: NO GUI until every feature works via /usleep commands and the setting set is final (Dave 2026-06-20). Until then, the commands ARE the admin panel.
 
 ## 9. Auto-sleep (default ON) -- 1.0
 
@@ -157,7 +157,7 @@ the global settings table.)
 ## 11. Version targeting
 
 Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.json` declares
-`minecraft >=26.1 <26.3` so one jar loads on 26.1.x and 26.2.x. NeoForge + backports after 1.0.
+`minecraft >=26.1 <26.3` so one jar loads on 26.1.x and 26.2.x. NeoForge + backports after 1.0. Versioning: development runs as a 0.x series, commands-first; the client GUI + vote-popup is the LAST phase before 1.0 -- no GUI until every feature works via /usleep commands.
 26.x command API in use: `src.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)`,
 `src.getPlayer()`, `sendSystemMessage`. Watch the 26.2 client API delta (e.g.
 `Minecraft.setScreen` removed) when the GUI/vote-popup lands.
@@ -179,7 +179,7 @@ Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.
 10. Auto-sleep: per-player opt-in (`/usleep auto`), dusk auto-bed-use via server-injected
     sleep, home-bed proximity OR Travelers' Backpack sleeping-bag check, miss notifications,
     default ON. (soft-dep: Travelers' Backpack.)
-11. Client admin panel GUI (query -> render -> set) + the vote popup.
+11. (LAST phase before 1.0) Client admin panel GUI (query -> render -> set) + the vote popup -- only after every feature above works via /usleep commands.
 12. Verify build green + smoketest on a 26.1.2 server; then 26.2 check. -> 1.0.
 13. Post-1.0: other loaders, backports, deferred "flavor" track (nightmares, dreams, horror
     entity, deprivation, XP/gifts, sounds, etc. -- see PROPOSED_1.0.md).

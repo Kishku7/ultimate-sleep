@@ -1,3 +1,6 @@
+> DECISIONS LOCKED 2026-06-20 -- see FUNCTIONAL_SPEC.md for the authoritative 1.0 design.
+> This file is kept as the original proposal + rationale record.
+
 # Ultimate Sleep -- Proposed 1.0 Feature Set
 
 Draft for review. Drawn from `research/sleep_mods_feature_list.md` (52 deduped behaviors
@@ -100,3 +103,4 @@ spectate-while-sleeping, sleep sounds, custom sleeping animation, world-progress
 4. **Accessibility group (C)** -- in 1.0, or post-1.0? (rec: in -- cheap, high-value, on-brand.)
 5. **World-progression-while-sleeping** (Somnia-style furnaces/crops sim, 9 mods) -- it's popular
    but heavy/perf-sensitive. Defer (rec), or pull into 1.0?
+

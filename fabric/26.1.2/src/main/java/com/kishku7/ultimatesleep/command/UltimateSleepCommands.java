@@ -10,26 +10,18 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 
 /**
  * The /usleep command tree.
  *
- *   /usleep status                       -- short status line (any user)
- *   /usleep query                        -- full settings dump + /afk owner (ANY user)
- *   /usleep afk                          -- toggle your own AFK (any user)
- *   /usleep admin set <key> <value>      -- change a setting (OP level 4)
- *   /usleep admin afk <player>           -- force a player into AFK (OP level 4)
+ * Open to all: status, query, afk.
+ * Tiered (FUNCTIONAL_SPEC.md section 2; checks in SleepPermissions):
+ *   /usleep set <key> <value>            -- op 2 or sleep-admin
+ *   /usleep admin set <key> <value>      -- op 3 or sleep-admin
+ *   /usleep admin afk <player>           -- op 3 or sleep-admin
+ *   /usleep admin admins add|remove|list -- op 3 or sleep-admin (manage the sleep-admin roster)
  *
- * Permission tiers (FUNCTIONAL_SPEC.md section 2):
- *   - status / query / afk + vote/auto commands: open to all.
- *   - /usleep set ... (NOT yet wired): the "special permission" tier -- sleep-admin roster,
- *     permission node, or op level 3 (COMMANDS_ADMIN). Roadmap step 2.
- *   - /usleep admin ...: OP level 4 (COMMANDS_OWNER) ONLY -- the master tier; the only place
- *     the sleep-admin roster will be managed.
- *
- * Returns the registered /usleep root node so the standalone /afk alias can redirect to the
- * "afk" child (see AfkCommandManager).
+ * Returns the /usleep root node so /afk can redirect to the "afk" child (AfkCommandManager).
  */
 public final class UltimateSleepCommands {
 
@@ -40,16 +32,29 @@ public final class UltimateSleepCommands {
                 .then(Commands.literal("status").executes(UltimateSleepCommands::status))
                 .then(Commands.literal("query").executes(UltimateSleepCommands::query)) // all users
                 .then(Commands.literal("afk").executes(UltimateSleepCommands::toggleAfk))
+                .then(Commands.literal("set")
+                        .requires(src -> UltimateSleep.permissions().canSet(src))
+                        .then(Commands.argument("key", StringArgumentType.word())
+                                .then(Commands.argument("value", StringArgumentType.greedyString())
+                                        .executes(UltimateSleepCommands::doSet))))
                 .then(Commands.literal("admin")
-                        // OP level 4 only.
-                        .requires(src -> src.permissions().hasPermission(Permissions.COMMANDS_OWNER))
+                        .requires(src -> UltimateSleep.permissions().canAdmin(src))
                         .then(Commands.literal("set")
                                 .then(Commands.argument("key", StringArgumentType.word())
                                         .then(Commands.argument("value", StringArgumentType.greedyString())
-                                                .executes(UltimateSleepCommands::adminSet))))
+                                                .executes(UltimateSleepCommands::doSet))))
                         .then(Commands.literal("afk")
                                 .then(Commands.argument("player", StringArgumentType.word())
-                                        .executes(UltimateSleepCommands::adminAfk)))));
+                                        .executes(UltimateSleepCommands::adminAfk)))
+                        .then(Commands.literal("admins")
+                                .then(Commands.literal("add")
+                                        .then(Commands.argument("player", StringArgumentType.word())
+                                                .executes(UltimateSleepCommands::adminsAdd)))
+                                .then(Commands.literal("remove")
+                                        .then(Commands.argument("player", StringArgumentType.word())
+                                                .executes(UltimateSleepCommands::adminsRemove)))
+                                .then(Commands.literal("list")
+                                        .executes(UltimateSleepCommands::adminsList)))));
     }
 
     private static int status(CommandContext<CommandSourceStack> ctx) {
@@ -57,12 +62,13 @@ public final class UltimateSleepCommands {
         int afkCount = src.getServer() == null ? 0 : UltimateSleep.afk().afkCount(src.getServer());
         src.sendSystemMessage(Component.literal(
                 "[Ultimate Sleep] enabled=" + UltimateSleep.settings().bool("enabled")
+                        + ", mode=" + UltimateSleep.settings().string("requirement_mode")
                         + ", required=" + UltimateSleep.settings().integer("required_sleep_percentage") + "%"
                         + ", AFK players=" + afkCount));
         return 1;
     }
 
-    /** Full settings dump -- available to ANY user so everyone can see how the mod is configured. */
+    /** Full settings dump -- available to ANY user. */
     private static int query(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         src.sendSystemMessage(Component.literal("[Ultimate Sleep] current settings:"));
@@ -87,7 +93,8 @@ public final class UltimateSleepCommands {
         return 1;
     }
 
-    private static int adminSet(CommandContext<CommandSourceStack> ctx) {
+    /** Shared settings setter for /usleep set and /usleep admin set. */
+    private static int doSet(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         String key = StringArgumentType.getString(ctx, "key");
         String value = StringArgumentType.getString(ctx, "value");
@@ -96,11 +103,12 @@ public final class UltimateSleepCommands {
             src.sendSystemMessage(Component.literal("[Ultimate Sleep] " + err));
             return 0;
         }
+        UltimateSleep.settings().save();
+        if (src.getServer() != null) UltimateSleep.engine().applyConfig(src.getServer());
         src.sendSystemMessage(Component.literal("[Ultimate Sleep] set " + key + " = " + value));
         return 1;
     }
 
-    /** Force a named player into AFK (OP 4). Uses getPlayerByName (must be online). */
     private static int adminAfk(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         String name = StringArgumentType.getString(ctx, "player");
@@ -113,6 +121,34 @@ public final class UltimateSleepCommands {
         UltimateSleep.afk().setManual(target, true);
         src.sendSystemMessage(Component.literal("[Ultimate Sleep] set " + name + " AFK."));
         target.sendSystemMessage(Component.literal("[Ultimate Sleep] An admin set you AFK."));
+        return 1;
+    }
+
+    private static int adminsAdd(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        String name = StringArgumentType.getString(ctx, "player");
+        boolean added = UltimateSleep.permissions().addAdmin(name);
+        src.sendSystemMessage(Component.literal(added
+                ? "[Ultimate Sleep] " + name + " is now a sleep-admin."
+                : "[Ultimate Sleep] " + name + " was already a sleep-admin."));
+        return added ? 1 : 0;
+    }
+
+    private static int adminsRemove(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        String name = StringArgumentType.getString(ctx, "player");
+        boolean removed = UltimateSleep.permissions().removeAdmin(name);
+        src.sendSystemMessage(Component.literal(removed
+                ? "[Ultimate Sleep] removed sleep-admin " + name + "."
+                : "[Ultimate Sleep] " + name + " was not a sleep-admin."));
+        return removed ? 1 : 0;
+    }
+
+    private static int adminsList(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        var admins = UltimateSleep.permissions().list();
+        src.sendSystemMessage(Component.literal("[Ultimate Sleep] sleep-admins: "
+                + (admins.isEmpty() ? "(none)" : String.join(", ", admins))));
         return 1;
     }
 }

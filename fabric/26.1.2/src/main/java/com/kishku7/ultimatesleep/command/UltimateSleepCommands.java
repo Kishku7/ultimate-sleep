@@ -5,6 +5,7 @@ import com.kishku7.ultimatesleep.config.Settings;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -19,6 +20,9 @@ import net.minecraft.server.permissions.Permissions;
  *   /usleep admin query               -- dump all settings + /afk owner (op level 2)
  *   /usleep admin set &lt;key&gt; &lt;value&gt;   -- change a setting (op level 2)
  *
+ * Returns the registered /usleep root node so the standalone /afk alias can be
+ * registered as a Brigadier redirect to the "afk" child (see AfkCommandManager).
+ *
  * The future client admin panel drives this: on open it issues
  * "/usleep admin query" to learn the current settings and which mod owns the
  * /afk command, then sends "/usleep admin set &lt;key&gt; &lt;value&gt;" per change.
@@ -27,8 +31,8 @@ public final class UltimateSleepCommands {
 
     private UltimateSleepCommands() {}
 
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("usleep")
+    public static LiteralCommandNode<CommandSourceStack> register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        return dispatcher.register(Commands.literal("usleep")
                 .then(Commands.literal("status").executes(UltimateSleepCommands::status))
                 .then(Commands.literal("afk").executes(UltimateSleepCommands::toggleAfk))
                 .then(Commands.literal("admin")

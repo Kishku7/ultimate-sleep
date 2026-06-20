@@ -17,11 +17,11 @@ import org.slf4j.LoggerFactory;
  *   - per-tick AFK activity tracking (AfkManager)
  *   - the /usleep command tree (UltimateSleepCommands)
  *   - conditional registration of a standalone /afk command (AfkCommandManager):
- *     if another mod already provides /afk, ours stands down and the owner is
- *     reported via /usleep admin query.
+ *     a redirect alias to /usleep afk, registered only if another mod does not
+ *     already provide /afk. The owner is reported via /usleep admin query.
  *
- * The client-side admin panel lives in the client entrypoint and is not yet
- * implemented (see FUNCTIONAL_SPEC.md).
+ * The client-side admin panel + vote popup live in the client entrypoint and are
+ * deferred to the last phase before 1.0 (see FUNCTIONAL_SPEC.md).
  */
 public final class UltimateSleep implements ModInitializer {
 
@@ -43,8 +43,8 @@ public final class UltimateSleep implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(AFK::tick);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            UltimateSleepCommands.register(dispatcher);
-            AFK_COMMANDS.registerAfkCommandIfAbsent(dispatcher);
+            var usleep = UltimateSleepCommands.register(dispatcher);
+            AFK_COMMANDS.registerAfkCommandIfAbsent(dispatcher, usleep.getChild("afk"));
         });
     }
 }

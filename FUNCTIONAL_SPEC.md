@@ -68,7 +68,7 @@ vote/no popup).
 
 `AfkCommandManager`: at command registration, if another mod already provides `/afk` we stand
 down and report the owner via `admin query` (exact owning mod id = TODO; currently "external").
-Else, if `provide_afk_command`, we register `/afk`. `/usleep afk` always works regardless.
+Else, if `provide_afk_command`, we register `/afk` as a Brigadier redirect alias to the `/usleep afk` node (identical behavior, single source of truth). `/usleep afk` always works regardless.
 
 ## 6. Sleeper visibility (feedback)
 

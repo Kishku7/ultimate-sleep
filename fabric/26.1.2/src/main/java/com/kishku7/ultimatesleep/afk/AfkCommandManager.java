@@ -2,16 +2,18 @@ package com.kishku7.ultimatesleep.afk;
 
 import com.kishku7.ultimatesleep.UltimateSleep;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.tree.CommandNode;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Owns the standalone /afk command -- but only when no other mod already
- * provides one. At command-registration time we look for an existing "afk"
- * literal on the dispatcher; if present, we stand down and record that an
- * external mod owns it. The owner is reported by /usleep admin query.
+ * Registers the standalone /afk command -- but only when no other mod already
+ * provides one. /afk is a Brigadier REDIRECT alias to the /usleep afk node, so
+ * it always behaves identically to /usleep afk (single source of truth).
+ *
+ * At command-registration time we look for an existing "afk" literal on the
+ * dispatcher; if present, we stand down and record that an external mod owns it.
+ * The owner is reported by /usleep admin query.
  *
  * KNOWN LIMITATIONS (TODO):
  *  - Brigadier does not record which mod registered a node, so a detected
@@ -44,7 +46,12 @@ public final class AfkCommandManager {
         };
     }
 
-    public void registerAfkCommandIfAbsent(CommandDispatcher<CommandSourceStack> dispatcher) {
+    /**
+     * Register /afk as a redirect alias to the given /usleep afk node, unless an
+     * external /afk already exists or the feature is disabled.
+     */
+    public void registerAfkCommandIfAbsent(CommandDispatcher<CommandSourceStack> dispatcher,
+                                           CommandNode<CommandSourceStack> usleepAfkNode) {
         if (dispatcher.getRoot().getChild("afk") != null) {
             owner = Owner.EXTERNAL;
             UltimateSleep.LOGGER.info("[UltimateSleep] /afk already provided by another mod; standing down.");
@@ -55,19 +62,9 @@ public final class AfkCommandManager {
             UltimateSleep.LOGGER.info("[UltimateSleep] provide_afk_command is off; not registering /afk.");
             return;
         }
-        dispatcher.register(Commands.literal("afk").executes(ctx -> {
-            CommandSourceStack src = ctx.getSource();
-            ServerPlayer p = src.getPlayer();
-            if (p == null) {
-                src.sendSystemMessage(Component.literal("Only players can use /afk."));
-                return 0;
-            }
-            boolean nowAfk = afk.toggleManual(p);
-            src.sendSystemMessage(Component.literal("You are " + (nowAfk ? "now AFK." : "no longer AFK.")));
-            return 1;
-        }));
+        dispatcher.register(Commands.literal("afk").redirect(usleepAfkNode));
         owner = Owner.ULTIMATE_SLEEP;
         ownerModId = "ultimate_sleep";
-        UltimateSleep.LOGGER.info("[UltimateSleep] registered /afk (no other provider found).");
+        UltimateSleep.LOGGER.info("[UltimateSleep] registered /afk as an alias to /usleep afk (no other provider found).");
     }
 }

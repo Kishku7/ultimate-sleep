@@ -56,10 +56,14 @@ public final class AfkCommandManager {
             return;
         }
         dispatcher.register(Commands.literal("afk").executes(ctx -> {
-            ServerPlayer p = ctx.getSource().getPlayerOrException();
+            CommandSourceStack src = ctx.getSource();
+            ServerPlayer p = src.getPlayer();
+            if (p == null) {
+                src.sendSystemMessage(Component.literal("Only players can use /afk."));
+                return 0;
+            }
             boolean nowAfk = afk.toggleManual(p);
-            ctx.getSource().sendSuccess(
-                    () -> Component.literal("You are " + (nowAfk ? "now AFK." : "no longer AFK.")), false);
+            src.sendSystemMessage(Component.literal("You are " + (nowAfk ? "now AFK." : "no longer AFK.")));
             return 1;
         }));
         owner = Owner.ULTIMATE_SLEEP;

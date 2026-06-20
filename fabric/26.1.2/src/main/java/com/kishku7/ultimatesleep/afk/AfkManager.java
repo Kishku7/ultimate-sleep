@@ -81,7 +81,8 @@ public final class AfkManager {
 
     /** Toggle manual AFK for a player. @return the resulting AFK state. */
     public boolean toggleManual(ServerPlayer p) {
-        int now = p.getServer() != null ? p.getServer().getTickCount() : 0;
+        MinecraftServer server = p.level().getServer();
+        int now = server != null ? server.getTickCount() : 0;
         State s = states.computeIfAbsent(p.getUUID(), k -> snapshot(new State(), p, now));
         s.manual = !s.manual;
         return s.afk();

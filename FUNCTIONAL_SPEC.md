@@ -108,6 +108,8 @@ Else, if `provide_afk_command`, we register `/afk` as a Brigadier redirect alias
 
 ## 7. World progression while sleeping (admin master + categories) -- 1.0
 
+NOTE: ACCELERATE (v0.9.0) advances the CLOCK only (timelapse); it does NOT tick the world. Crop/furnace/animal progress is THIS feature -- they compose (enable both).
+
 Master `world_progression_enabled`, then per-category sub-toggles so admins scope the cost:
 - `progress_crops` -- crops AND plant/tree growth: saplings/tree growth, bamboo, sugar
   cane/cactus, plus orphan-leaf decay (leaves decaying as they would after a tree is cut).
@@ -192,7 +194,7 @@ Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.
 `src.getPlayer()`, `sendSystemMessage`. Watch the 26.2 client API delta (e.g.
 `Minecraft.setScreen` removed) when the GUI/vote-popup lands.
 
-## Build status (2026-06-20) -- v0.8.0
+## Build status (2026-06-20) -- v0.9.0
 
 0.1.0 builds GREEN and SMOKETESTED on a Fabric 26.1 server (clean boot, no errors).
 Verified live: mod init, /usleep status + query, /afk redirect alias, sleep-admin roster
@@ -204,7 +206,7 @@ sleep-admin roster; AFK tracking + notify-on-any-change (incl. movement) + /afk 
 /usleep admin afk; SIMPLE-mode gamerule drive + per-sleeper broadcasts; /usleep auto (dusk
 auto-bed + miss notice); VOTE mode command path (/usleep yes|no, auto-start on first sleeper,
 30s window, bed=auto-yes, AFK excluded, pass rules, gamerule-toggle skip); mode-aware gamerule; AFK-EXCLUDED requirement (SIMPLE drives skip itself when exclude_afk); REWARDS on wake (regen / golden-carrot drop-if-full / speed).
-PENDING: ACCELERATE (need 26.x clock API),
+PENDING:
 world-progression sim, accessibility DONE except highlight: sleep_ignore_monsters (EntitySleepEvents), sleep_anytime + ignore_bed_too_far (ServerPlayerSleepMixin @Redirects); highlight_blocking_mobs needs client; auto-sleep home-bed +
 Travelers' Backpack path, client GUI + vote popup.
 

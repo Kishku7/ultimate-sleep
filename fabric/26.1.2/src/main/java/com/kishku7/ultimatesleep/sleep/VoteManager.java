@@ -13,23 +13,21 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * VOTE-mode sleep voting (command path).
+ * VOTE-mode sleep voting.
  *
  * When requirement_mode == VOTE, the first player to get into bed auto-starts a vote (and
- * auto-votes YES). Everyone non-AFK votes with /usleep yes | /usleep no during the
- * vote_duration_seconds window; getting into bed mid-vote is an auto-YES. After the window the
- * result is tallied per vote_pass_rule. On PASS we skip the night by briefly setting
- * playersSleepingPercentage to 0 (vanilla then skips, since the original sleeper is deep-asleep)
- * and restore it right after. On FAIL the night continues.
- *
- * The client vote popup is deferred to the GUI phase; this is the full command-path implementation.
+ * auto-votes YES). Everyone non-AFK votes with /usleep yes | /usleep no (or the client popup)
+ * during the vote_duration_seconds window; getting into bed mid-vote is an auto-YES. After the
+ * window the result is tallied per vote_pass_rule. On PASS we ask the engine to skip the night
+ * (engine.requestSkip()) -- ServerLevelSleepSkipMixin then lets vanilla advance time, wake
+ * sleepers, and reset weather. The gamerule stays pinned at 101 (mod owns every skip). On FAIL
+ * the night continues.
  */
 public final class VoteManager {
 
     private final Settings settings;
     private boolean active = false;
     private long startTick = 0;
-    private long restoreGameruleAtTick = -1;
     private final Map<UUID, Boolean> votes = new HashMap<>();
 
     public VoteManager(Settings settings) {
@@ -38,12 +36,6 @@ public final class VoteManager {
 
     public void tick(MinecraftServer server) {
         long now = server.getTickCount();
-
-        // Restore the gamerule shortly after a pass-skip.
-        if (restoreGameruleAtTick >= 0 && now >= restoreGameruleAtTick) {
-            setGamerule(server, 100);
-            restoreGameruleAtTick = -1;
-        }
 
         if (!"VOTE".equals(settings.string("requirement_mode"))) {
             if (active) { active = false; votes.clear(); }
@@ -129,18 +121,12 @@ public final class VoteManager {
 
         if (pass) {
             broadcast(server, "Sleep vote passed -- skipping the night.");
-            setGamerule(server, 0);
-            restoreGameruleAtTick = server.getTickCount() + 10;
+            UltimateSleep.engine().requestSkip();
         } else {
             broadcast(server, "Sleep vote failed -- the night continues.");
         }
         active = false;
         votes.clear();
-    }
-
-    private void setGamerule(MinecraftServer server, int v) {
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack(), "gamerule playersSleepingPercentage " + v);
     }
 
     private void broadcast(MinecraftServer server, String m) {

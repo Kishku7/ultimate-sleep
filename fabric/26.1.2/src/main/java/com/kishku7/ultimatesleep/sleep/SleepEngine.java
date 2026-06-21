@@ -16,19 +16,21 @@ import java.util.UUID;
 /**
  * SIMPLE-mode night-skip engine + sleeper messaging, with AFK exclusion and two skip modes.
  *
- * The vanilla playersSleepingPercentage gamerule is kept honest = required_sleep_percentage in
- * INSTANT mode (so /gamerule matches the mod and the messages). When exclude_afk_from_requirement
- * is on we additionally drive the skip over the NON-AFK eligible count (briefly bursting the
- * gamerule to 0 so vanilla performs the skip the moment that count is met -- this only fires
- * EARLIER than vanilla, never later). ACCELERATE pins the gamerule to 100 and time-lapses instead.
- * VOTE mode (VoteManager) pins it to 100.
+ * Policy (Dave, 2026-06-21): the vanilla playersSleepingPercentage gamerule is PINNED to 101 and
+ * left there. With 101, sleepersNeeded always rounds up to (activePlayers + 1) -- unreachable --
+ * so vanilla never skips the night by itself even if every player piles into bed. The ONLY trigger
+ * is this mod. INSTANT skips are driven through {@link #requestSkip()}: when the configured share
+ * of eligible players is deep-asleep we raise the pending flag, and ServerLevelSleepSkipMixin lets
+ * vanilla's own skip block run (clock advance + wake + weather) for that one tick. ACCELERATE mode
+ * instead time-lapses the night via ServerLevelTimeMixin and never requests a skip. VOTE mode is
+ * handled by VoteManager, which also calls requestSkip() on a passing vote.
  */
 public final class SleepEngine {
 
     private final Settings settings;
     private final Set<UUID> sleeping = new HashSet<>();
-    private long restoreGameruleAtTick = -1;
     private volatile boolean accelerating = false;
+    private volatile boolean skipPending = false;
 
     public SleepEngine(Settings settings) {
         this.settings = settings;
@@ -38,26 +40,30 @@ public final class SleepEngine {
         return accelerating;
     }
 
+    /** Ask the skip mixin to let vanilla advance the night on the next overworld tick. */
+    public void requestSkip() {
+        this.skipPending = true;
+    }
+
+    public boolean isSkipPending() {
+        return this.skipPending;
+    }
+
+    public void consumeSkip() {
+        this.skipPending = false;
+    }
+
+    /**
+     * Pin the gamerule to 101 so vanilla can NEVER self-trigger -- sleepersNeeded always rounds to
+     * (activePlayers + 1), which is unreachable, so even if every player piles into bed the vanilla
+     * skip stays dormant. The mod owns every skip (via the skip mixin's pending flag).
+     */
     public void applyConfig(MinecraftServer server) {
         if (server == null) return;
-        int pct;
-        if ("SIMPLE".equals(settings.string("requirement_mode"))) {
-            pct = "ACCELERATE".equals(settings.string("skip_mode"))
-                    ? 100 // we time-lapse; vanilla must not instant-jump
-                    : clamp(settings.integer("required_sleep_percentage"), 0, 100); // honest display
-        } else {
-            pct = 100; // VOTE
-        }
-        setGamerule(server, pct);
+        setGamerule(server, 101);
     }
 
     public void tick(MinecraftServer server) {
-        long now = server.getTickCount();
-        if (restoreGameruleAtTick >= 0 && now >= restoreGameruleAtTick) {
-            applyConfig(server); // restore to the correct configured value
-            restoreGameruleAtTick = -1;
-        }
-
         if (!settings.bool("enabled") || !"SIMPLE".equals(settings.string("requirement_mode"))) {
             if (!sleeping.isEmpty()) sleeping.clear();
             accelerating = false;
@@ -110,11 +116,9 @@ public final class SleepEngine {
             }
         } else {
             accelerating = false;
-            // AFK-excluded: drive the skip ourselves once the non-AFK requirement is met (fires
-            // no later than vanilla; needed when AFK players would otherwise inflate the count).
-            if (excludeAfk && sleepCount >= required && deep >= 1) {
-                setGamerule(server, 0);
-                restoreGameruleAtTick = now + 10;
+            // INSTANT: the mod drives the skip the moment the configured share is deep-asleep.
+            if (sleepCount >= required && deep >= 1) {
+                requestSkip();
             }
         }
 

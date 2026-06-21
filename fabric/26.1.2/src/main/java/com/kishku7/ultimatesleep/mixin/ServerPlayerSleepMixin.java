@@ -16,8 +16,8 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  *  - ignore_bed_too_far: bypass the TOO_FAR_AWAY distance check.
  *  - sleep_anytime: bypass the BedRule time/dimension gate (canSleep).
  *
- * Both are admin toggles (off by default); when off, vanilla behavior is preserved because the
- * redirect falls through to the original call.
+ * (highlight_blocking_mobs is handled in the ALLOW_NEARBY_MONSTERS event, not here.)
+ * Both are admin toggles (off by default); when off, vanilla behavior is preserved.
  */
 @Mixin(ServerPlayer.class)
 public abstract class ServerPlayerSleepMixin {

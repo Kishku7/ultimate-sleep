@@ -138,7 +138,10 @@ public final class UltimateSleepCommands {
         }
         UltimateSleep.settings().save();
         if (src.getServer() != null) UltimateSleep.engine().applyConfig(src.getServer());
-        src.sendSystemMessage(Component.literal("[Ultimate Sleep] set " + key + " = " + value));
+        Settings.Entry e = UltimateSleep.settings().get(key);
+        Object resolved = e.get();
+        String shown = (e.type == Settings.Type.BOOL) ? String.valueOf(resolved).toUpperCase() : String.valueOf(resolved);
+        src.sendSystemMessage(Component.literal("[Ultimate Sleep] " + key + " is set to " + shown));
         return 1;
     }
 

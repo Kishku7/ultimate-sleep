@@ -194,7 +194,7 @@ Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.
 `src.getPlayer()`, `sendSystemMessage`. Watch the 26.2 client API delta (e.g.
 `Minecraft.setScreen` removed) when the GUI/vote-popup lands.
 
-## Build status (2026-06-20) -- v0.12.0
+## Build status (2026-06-20) -- v0.13.0
 
 0.1.0 builds GREEN and SMOKETESTED on a Fabric 26.1 server (clean boot, no errors).
 Verified live: mod init, /usleep status + query, /afk redirect alias, sleep-admin roster
@@ -206,7 +206,7 @@ sleep-admin roster; AFK tracking + notify-on-any-change (incl. movement) + /afk 
 /usleep admin afk; SIMPLE-mode gamerule drive + per-sleeper broadcasts; /usleep auto (dusk
 auto-bed + miss notice); VOTE mode command path (/usleep yes|no, auto-start on first sleeper,
 30s window, bed=auto-yes, AFK excluded, pass rules, gamerule-toggle skip); mode-aware gamerule; AFK-EXCLUDED requirement (SIMPLE drives skip itself when exclude_afk); REWARDS on wake (regen / golden-carrot drop-if-full / speed).
-PENDING (client phase only): highlight_blocking_mobs (client glow), client admin GUI + vote popup; (also: sleep_anytime+ACCELERATE composition, perf tuning). Prior:
+PENDING (client phase only): client admin GUI + vote popup, per-player-only mob highlight; (also: sleep_anytime+ACCELERATE composition, perf tuning). Prior:
 world-progression DONE (crops via random-tick boost; smelting/husbandry/despawn via skip-tick advance); accessibility DONE except highlight: sleep_ignore_monsters (EntitySleepEvents), sleep_anytime + ignore_bed_too_far (ServerPlayerSleepMixin @Redirects); highlight_blocking_mobs needs client; auto-sleep home-bed +
 Travelers' Backpack path, client GUI + vote popup.
 

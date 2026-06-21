@@ -15,19 +15,20 @@ import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.util.EventResult;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Ultimate Sleep -- common (server + integrated-server) entrypoint.
- *
- * Wires: settings (load/persist), the sleep-admin permission roster, the per-tick managers (AFK
- * tracking + notifications, SIMPLE-mode engine + messaging + AFK-excluded skip, auto-sleep at
- * dusk, VOTE-mode voting, rewards-on-wake), the accessibility sleep-check overrides
- * (EntitySleepEvents), the /usleep command tree, and the conditional /afk redirect alias. The
- * mode-dependent vanilla gamerule is applied on server start.
- *
- * The client admin panel + vote popup are deferred to the last phase before 1.0 (FUNCTIONAL_SPEC.md).
+ * Ultimate Sleep -- common (server + integrated-server) entrypoint. Wires settings, the
+ * permission roster, all per-tick managers, the accessibility sleep-event overrides, the /usleep
+ * command tree, and the conditional /afk redirect alias. The mode-dependent vanilla gamerule is
+ * applied on server start. The client admin panel + vote popup are the deferred client phase.
  */
 public final class UltimateSleep implements ModInitializer {
 
@@ -69,9 +70,15 @@ public final class UltimateSleep implements ModInitializer {
 
         ServerLifecycleEvents.SERVER_STARTED.register(ENGINE::applyConfig);
 
-        // Accessibility: let players sleep with nearby monsters when enabled.
-        // (sleep_anytime has no event in 26.x fabric-api -- time is gated by BedRule; needs a mixin, deferred.)
+        // Accessibility: sleep despite nearby monsters; optionally glow the blockers so they're findable.
         EntitySleepEvents.ALLOW_NEARBY_MONSTERS.register((player, sleepingPos, vanillaResult) -> {
+            if (SETTINGS.bool("highlight_blocking_mobs") && player.level() instanceof ServerLevel sl) {
+                Vec3 c = Vec3.atBottomCenterOf(sleepingPos);
+                AABB box = new AABB(c.x - 8.0, c.y - 5.0, c.z - 8.0, c.x + 8.0, c.y + 5.0, c.z + 8.0);
+                for (Monster m : sl.getEntitiesOfClass(Monster.class, box, mob -> mob.isPreventingPlayerRest(sl, player))) {
+                    m.addEffect(new MobEffectInstance(MobEffects.GLOWING, 200, 0, false, false), null);
+                }
+            }
             if (SETTINGS.bool("sleep_ignore_monsters")) return EventResult.ALLOW;
             return EventResult.PASS;
         });

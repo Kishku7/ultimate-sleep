@@ -102,6 +102,7 @@ public final class AfkManager {
     public boolean toggleManual(ServerPlayer p) {
         State s = stateFor(p);
         s.manual = !s.manual;
+        ultimateSleep$notify(p, s);
         return s.afk();
     }
 
@@ -110,7 +111,17 @@ public final class AfkManager {
         State s = stateFor(p);
         s.manual = afk;
         if (!afk) s.auto = false;
+        ultimateSleep$notify(p, s);
         return s.afk();
+    }
+
+    /** Immediately tell the player their current AFK state and mark it notified (avoids tick dup). */
+    private void ultimateSleep$notify(ServerPlayer p, State s) {
+        boolean afk = s.afk();
+        p.sendSystemMessage(Component.literal(afk
+                ? "[Ultimate Sleep] You are now AFK."
+                : "[Ultimate Sleep] You are no longer AFK."));
+        s.notified = afk;
     }
 
     public int afkCount(MinecraftServer server) {

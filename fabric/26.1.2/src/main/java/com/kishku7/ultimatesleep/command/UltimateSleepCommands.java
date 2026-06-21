@@ -14,12 +14,15 @@ import net.minecraft.server.level.ServerPlayer;
 /**
  * The /usleep command tree.
  *
- * Open to all: status, query, afk.
+ * Open to all: status, query, afk, auto, yes, no.
  * Tiered (FUNCTIONAL_SPEC.md section 2; checks in SleepPermissions):
  *   /usleep set <key> <value>            -- op 2 or sleep-admin
  *   /usleep admin set <key> <value>      -- op 3 or sleep-admin
  *   /usleep admin afk <player>           -- op 3 or sleep-admin
- *   /usleep admin admins add|remove|list -- op 3 or sleep-admin (manage the sleep-admin roster)
+ *   /usleep admin admins add|remove|list -- op 3 or sleep-admin
+ *
+ * AFK status messages are sent centrally by AfkManager on any transition, so the afk commands
+ * here do not message the affected player themselves.
  *
  * Returns the /usleep root node so /afk can redirect to the "afk" child (AfkCommandManager).
  */
@@ -32,6 +35,9 @@ public final class UltimateSleepCommands {
                 .then(Commands.literal("status").executes(UltimateSleepCommands::status))
                 .then(Commands.literal("query").executes(UltimateSleepCommands::query)) // all users
                 .then(Commands.literal("afk").executes(UltimateSleepCommands::toggleAfk))
+                .then(Commands.literal("auto").executes(UltimateSleepCommands::toggleAuto))
+                .then(Commands.literal("yes").executes(ctx -> vote(ctx, true)))
+                .then(Commands.literal("no").executes(ctx -> vote(ctx, false)))
                 .then(Commands.literal("set")
                         .requires(src -> UltimateSleep.permissions().canSet(src))
                         .then(Commands.argument("key", StringArgumentType.word())
@@ -88,8 +94,35 @@ public final class UltimateSleepCommands {
             src.sendSystemMessage(Component.literal("Only players can toggle AFK."));
             return 0;
         }
-        boolean nowAfk = UltimateSleep.afk().toggleManual(p);
-        src.sendSystemMessage(Component.literal("You are " + (nowAfk ? "now AFK." : "no longer AFK.")));
+        UltimateSleep.afk().toggleManual(p); // AfkManager notifies the player on the next tick
+        return 1;
+    }
+
+    private static int toggleAuto(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer p = src.getPlayer();
+        if (p == null) {
+            src.sendSystemMessage(Component.literal("Only players can use auto-sleep."));
+            return 0;
+        }
+        if (!UltimateSleep.settings().bool("auto_sleep_enabled")) {
+            src.sendSystemMessage(Component.literal("[Ultimate Sleep] Auto-sleep is disabled by the admin."));
+            return 0;
+        }
+        boolean on = UltimateSleep.autoSleep().toggle(p);
+        src.sendSystemMessage(Component.literal("[Ultimate Sleep] Auto-sleep is now "
+                + (on ? "ON" : "OFF") + " for you."));
+        return 1;
+    }
+
+    private static int vote(CommandContext<CommandSourceStack> ctx, boolean yes) {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer p = src.getPlayer();
+        if (p == null) {
+            src.sendSystemMessage(Component.literal("Only players can vote."));
+            return 0;
+        }
+        UltimateSleep.vote().castVote(p, yes);
         return 1;
     }
 
@@ -118,9 +151,8 @@ public final class UltimateSleepCommands {
             src.sendSystemMessage(Component.literal("[Ultimate Sleep] player not found / offline: " + name));
             return 0;
         }
-        UltimateSleep.afk().setManual(target, true);
+        UltimateSleep.afk().setManual(target, true); // target notified by AfkManager on next tick
         src.sendSystemMessage(Component.literal("[Ultimate Sleep] set " + name + " AFK."));
-        target.sendSystemMessage(Component.literal("[Ultimate Sleep] An admin set you AFK."));
         return 1;
     }
 

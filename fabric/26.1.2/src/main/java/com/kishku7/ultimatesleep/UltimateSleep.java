@@ -5,7 +5,9 @@ import com.kishku7.ultimatesleep.afk.AfkManager;
 import com.kishku7.ultimatesleep.command.UltimateSleepCommands;
 import com.kishku7.ultimatesleep.config.Settings;
 import com.kishku7.ultimatesleep.permission.SleepPermissions;
+import com.kishku7.ultimatesleep.sleep.AutoSleepManager;
 import com.kishku7.ultimatesleep.sleep.SleepEngine;
+import com.kishku7.ultimatesleep.sleep.VoteManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -16,9 +18,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Ultimate Sleep -- common (server + integrated-server) entrypoint.
  *
- * Wires: settings (load/persist), the sleep-admin permission roster, per-tick AFK tracking and
- * the SIMPLE-mode sleep engine + messaging, the /usleep command tree, and the conditional /afk
- * redirect alias. SIMPLE-mode applies the vanilla playersSleepingPercentage gamerule on start.
+ * Wires: settings (load/persist), the sleep-admin permission roster, and the per-tick managers
+ * (AFK tracking + notifications, SIMPLE-mode engine + messaging, auto-sleep at dusk, VOTE-mode
+ * voting), the /usleep command tree, and the conditional /afk redirect alias. The mode-dependent
+ * vanilla gamerule is applied on server start.
  *
  * The client admin panel + vote popup are deferred to the last phase before 1.0 (FUNCTIONAL_SPEC.md).
  */
@@ -32,12 +35,16 @@ public final class UltimateSleep implements ModInitializer {
     private static final AfkCommandManager AFK_COMMANDS = new AfkCommandManager(AFK);
     private static final SleepPermissions PERMISSIONS = new SleepPermissions();
     private static final SleepEngine ENGINE = new SleepEngine(SETTINGS);
+    private static final AutoSleepManager AUTO = new AutoSleepManager(SETTINGS);
+    private static final VoteManager VOTE = new VoteManager(SETTINGS);
 
     public static Settings settings() { return SETTINGS; }
     public static AfkManager afk() { return AFK; }
     public static AfkCommandManager afkCommands() { return AFK_COMMANDS; }
     public static SleepPermissions permissions() { return PERMISSIONS; }
     public static SleepEngine engine() { return ENGINE; }
+    public static AutoSleepManager autoSleep() { return AUTO; }
+    public static VoteManager vote() { return VOTE; }
 
     @Override
     public void onInitialize() {
@@ -45,10 +52,13 @@ public final class UltimateSleep implements ModInitializer {
 
         SETTINGS.load();
         PERMISSIONS.load();
+        AUTO.load();
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             AFK.tick(server);
             ENGINE.tick(server);
+            AUTO.tick(server);
+            VOTE.tick(server);
         });
 
         ServerLifecycleEvents.SERVER_STARTED.register(ENGINE::applyConfig);

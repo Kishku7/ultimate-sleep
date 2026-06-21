@@ -1,6 +1,7 @@
 package com.kishku7.ultimatesleep.afk;
 
 import com.kishku7.ultimatesleep.config.Settings;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -11,19 +12,16 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Tracks which players are AFK.
+ * Tracks which players are AFK and notifies them on EVERY status change.
  *
- * Auto-AFK: a player is considered AFK after {@code afk_threshold_seconds} with no change in
- * position or look direction. Manual AFK: a player (or our /afk command, or an admin via
- * /usleep admin afk) toggles/sets it explicitly.
+ * Auto-AFK: no change in position/look for {@code afk_threshold_seconds}. Manual AFK: set via
+ * /usleep afk, the /afk alias, or /usleep admin afk. Cancellation: any NON-bed movement clears
+ * AFK; being in a bed / sleeping does not (we skip the movement check while asleep).
  *
- * Cancellation rule (Dave 2026-06-20): any NON-bed movement cancels AFK. Being in a bed /
- * sleeping does NOT cancel it -- so while a player is sleeping we skip the movement check
- * entirely, and AFK persists. (TODO: also exempt the movement caused by auto-sleep moving a
- * player into a bed, once auto-sleep is implemented.)
- *
- * State is rebuilt against the currently-online players each tick, so logged-off players are
- * dropped automatically.
+ * Notification is centralized here (single source of truth): each tick we compare a player's
+ * current AFK state to the last state we told them, and send a message on any transition -- so
+ * losing AFK by moving (or any other reason) always notifies. Commands therefore do NOT message
+ * the affected player themselves.
  */
 public final class AfkManager {
 
@@ -31,8 +29,9 @@ public final class AfkManager {
         double x, y, z;
         float yaw, pitch;
         int lastActiveTick;
-        boolean auto;    // set by the idle timer
-        boolean manual;  // toggled/set explicitly
+        boolean auto;      // set by the idle timer
+        boolean manual;    // set explicitly
+        boolean notified;  // last AFK state announced to the player
 
         boolean afk() { return auto || manual; }
     }
@@ -58,19 +57,25 @@ public final class AfkManager {
             State s = states.computeIfAbsent(id, k -> snapshot(new State(), p, now));
 
             // Being in a bed / sleeping never cancels AFK -> skip the movement check while asleep.
-            if (p.isSleeping()) {
-                continue;
+            if (!p.isSleeping()) {
+                boolean moved = p.getX() != s.x || p.getY() != s.y || p.getZ() != s.z
+                        || p.getYRot() != s.yaw || p.getXRot() != s.pitch;
+                if (moved) {
+                    snapshot(s, p, now);
+                    s.auto = false;
+                    s.manual = false;
+                } else if (!s.manual && (now - s.lastActiveTick) >= thresholdTicks) {
+                    s.auto = true;
+                }
             }
 
-            boolean moved = p.getX() != s.x || p.getY() != s.y || p.getZ() != s.z
-                    || p.getYRot() != s.yaw || p.getXRot() != s.pitch;
-
-            if (moved) {
-                snapshot(s, p, now);
-                s.auto = false;
-                s.manual = false;
-            } else if (!s.manual && (now - s.lastActiveTick) >= thresholdTicks) {
-                s.auto = true;
+            // Notify on any transition (single source of truth).
+            boolean afk = s.afk();
+            if (afk != s.notified) {
+                p.sendSystemMessage(Component.literal(afk
+                        ? "[Ultimate Sleep] You are now AFK."
+                        : "[Ultimate Sleep] You are no longer AFK."));
+                s.notified = afk;
             }
         }
         states.keySet().retainAll(online);
@@ -93,14 +98,14 @@ public final class AfkManager {
         return states.computeIfAbsent(p.getUUID(), k -> snapshot(new State(), p, now));
     }
 
-    /** Toggle manual AFK for a player. @return the resulting AFK state. */
+    /** Toggle manual AFK. The player is notified by the next tick. @return resulting AFK state. */
     public boolean toggleManual(ServerPlayer p) {
         State s = stateFor(p);
         s.manual = !s.manual;
         return s.afk();
     }
 
-    /** Explicitly set manual AFK for a player (used by /usleep admin afk). @return resulting AFK state. */
+    /** Explicitly set manual AFK (used by /usleep admin afk). @return resulting AFK state. */
     public boolean setManual(ServerPlayer p, boolean afk) {
         State s = stateFor(p);
         s.manual = afk;

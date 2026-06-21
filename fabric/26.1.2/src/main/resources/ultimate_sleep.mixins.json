@@ -6,7 +6,8 @@
     "ServerPlayerSleepMixin",
     "ServerLevelWeatherMixin",
     "ServerLevelTimeMixin",
-    "ServerLevelProgressionMixin"
+    "ServerLevelProgressionMixin",
+    "FurnaceProgressionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

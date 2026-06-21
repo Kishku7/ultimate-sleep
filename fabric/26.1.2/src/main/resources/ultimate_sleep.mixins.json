@@ -5,7 +5,8 @@
   "mixins": [
     "ServerPlayerSleepMixin",
     "ServerLevelWeatherMixin",
-    "ServerLevelTimeMixin"
+    "ServerLevelTimeMixin",
+    "ServerLevelProgressionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

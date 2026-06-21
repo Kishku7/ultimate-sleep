@@ -49,6 +49,7 @@ public final class UltimateSleepCommands {
                 .then(Commands.literal("status").executes(UltimateSleepCommands::status))
                 .then(Commands.literal("query").executes(UltimateSleepCommands::query)) // all users
                 .then(Commands.literal("afk").executes(UltimateSleepCommands::toggleAfk))
+                .then(Commands.literal("gui").executes(UltimateSleepCommands::openGui))
                 .then(Commands.literal("auto").executes(UltimateSleepCommands::toggleAuto))
                 .then(Commands.literal("yes").executes(ctx -> vote(ctx, true)))
                 .then(Commands.literal("no").executes(ctx -> vote(ctx, false)))
@@ -80,6 +81,20 @@ public final class UltimateSleepCommands {
     private static String shown(Settings.Entry e) {
         Object v = e.get();
         return e.type == Settings.Type.BOOL ? String.valueOf(v).toUpperCase() : String.valueOf(v);
+    }
+
+        private static int openGui(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer p = src.getPlayer();
+        if (p == null) {
+            src.sendSystemMessage(Component.literal("Only players can open the GUI."));
+            return 0;
+        }
+        if (!com.kishku7.ultimatesleep.net.UltimateSleepNet.openGuiFor(p)) {
+            p.sendSystemMessage(Component.literal("[Ultimate Sleep] The in-game panel needs the Ultimate Sleep client mod. Use /usleep query and /usleep set instead."));
+            return 0;
+        }
+        return 1;
     }
 
     private static int status(CommandContext<CommandSourceStack> ctx) {

@@ -4,6 +4,7 @@ import com.kishku7.ultimatesleep.afk.AfkCommandManager;
 import com.kishku7.ultimatesleep.afk.AfkManager;
 import com.kishku7.ultimatesleep.command.UltimateSleepCommands;
 import com.kishku7.ultimatesleep.config.Settings;
+import com.kishku7.ultimatesleep.net.UltimateSleepNet;
 import com.kishku7.ultimatesleep.permission.SleepPermissions;
 import com.kishku7.ultimatesleep.sleep.AutoSleepManager;
 import com.kishku7.ultimatesleep.sleep.RewardManager;
@@ -59,6 +60,9 @@ public final class UltimateSleep implements ModInitializer {
         SETTINGS.load();
         PERMISSIONS.load();
         AUTO.load();
+
+        UltimateSleepNet.registerTypes();
+        UltimateSleepNet.registerServer();
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             AFK.tick(server);

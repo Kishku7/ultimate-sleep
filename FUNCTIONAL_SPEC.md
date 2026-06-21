@@ -123,7 +123,7 @@ Somnia-style; perf-sensitive, hence the per-category scoping.
 
 Client GUI generated from the settings registry. On open: `/usleep query` (read settings
 + `/afk` owner) -> render controls grouped by category -> each change sends
-`/usleep admin set <key> <value>`. Deferred: NO GUI until every feature works via /usleep commands and the setting set is final (Dave 2026-06-20). Until then, the commands ARE the admin panel.
+`/usleep admin set <key> <value>`. Deferred: NO GUI until every feature works via /usleep commands and the setting set is final (Dave 2026-06-20). Client GUI now exists (v0.16.0): opened via /usleep gui (server sends an open payload to modded clients), reads/writes over a back-channel (request/sync/set/roster payloads), server-permission-checked, command path remains the vanilla-client fallback.
 
 ## 9. Auto-sleep (default ON) -- 1.0
 
@@ -206,7 +206,7 @@ sleep-admin roster; AFK tracking + notify-on-any-change (incl. movement) + /afk 
 /usleep admin afk; SIMPLE-mode gamerule drive + per-sleeper broadcasts; /usleep auto (dusk
 auto-bed + miss notice); VOTE mode command path (/usleep yes|no, auto-start on first sleeper,
 30s window, bed=auto-yes, AFK excluded, pass rules, gamerule-toggle skip); mode-aware gamerule; AFK-EXCLUDED requirement (SIMPLE drives skip itself when exclude_afk); REWARDS on wake (regen / golden-carrot drop-if-full / speed).
-PENDING (client phase only): client admin GUI + vote popup, per-player-only mob highlight; (also: sleep_anytime+ACCELERATE composition, perf tuning). Prior:
+PENDING (client phase only): vote popup (client), CD pixel-exact theming, per-player-only mob highlight; (also: sleep_anytime+ACCELERATE composition, perf tuning). Prior:
 world-progression DONE (crops via random-tick boost; smelting/husbandry/despawn via skip-tick advance); accessibility DONE except highlight: sleep_ignore_monsters (EntitySleepEvents), sleep_anytime + ignore_bed_too_far (ServerPlayerSleepMixin @Redirects); highlight_blocking_mobs needs client; auto-sleep home-bed +
 Travelers' Backpack path, client GUI + vote popup.
 

@@ -16,15 +16,12 @@ import java.util.UUID;
 /**
  * SIMPLE-mode night-skip engine + sleeper messaging, with AFK exclusion and two skip modes.
  *
- * SIMPLE mode mirrors vanilla playersSleepingPercentage. Requirement is computed over eligible
- * players (NON-AFK when exclude_afk_from_requirement). Skip behavior:
- *  - INSTANT: if exclude_afk we drive the skip ourselves (briefly set gamerule 0 so vanilla jumps);
- *    otherwise vanilla handles it via the gamerule = required_sleep_percentage.
- *  - ACCELERATE: we keep the gamerule at 100 (no vanilla jump) and set an "accelerating" flag
- *    while the requirement is met and it's still night; ServerLevelTimeMixin then runs tickTime()
- *    extra times to fast-forward. At dawn (isBrightOutside) we wake the sleepers and stop.
- *
- * VOTE mode is handled by VoteManager (gamerule pinned to 100).
+ * The vanilla playersSleepingPercentage gamerule is kept honest = required_sleep_percentage in
+ * INSTANT mode (so /gamerule matches the mod and the messages). When exclude_afk_from_requirement
+ * is on we additionally drive the skip over the NON-AFK eligible count (briefly bursting the
+ * gamerule to 0 so vanilla performs the skip the moment that count is met -- this only fires
+ * EARLIER than vanilla, never later). ACCELERATE pins the gamerule to 100 and time-lapses instead.
+ * VOTE mode (VoteManager) pins it to 100.
  */
 public final class SleepEngine {
 
@@ -37,7 +34,6 @@ public final class SleepEngine {
         this.settings = settings;
     }
 
-    /** Read by ServerLevelTimeMixin to know whether to fast-forward time. */
     public boolean isAccelerating() {
         return accelerating;
     }
@@ -46,13 +42,9 @@ public final class SleepEngine {
         if (server == null) return;
         int pct;
         if ("SIMPLE".equals(settings.string("requirement_mode"))) {
-            if ("ACCELERATE".equals(settings.string("skip_mode"))) {
-                pct = 100; // we control time advance; vanilla must not instant-jump
-            } else {
-                pct = settings.bool("exclude_afk_from_requirement")
-                        ? 100
-                        : clamp(settings.integer("required_sleep_percentage"), 0, 100);
-            }
+            pct = "ACCELERATE".equals(settings.string("skip_mode"))
+                    ? 100 // we time-lapse; vanilla must not instant-jump
+                    : clamp(settings.integer("required_sleep_percentage"), 0, 100); // honest display
         } else {
             pct = 100; // VOTE
         }
@@ -62,7 +54,7 @@ public final class SleepEngine {
     public void tick(MinecraftServer server) {
         long now = server.getTickCount();
         if (restoreGameruleAtTick >= 0 && now >= restoreGameruleAtTick) {
-            setGamerule(server, 100);
+            applyConfig(server); // restore to the correct configured value
             restoreGameruleAtTick = -1;
         }
 
@@ -95,10 +87,11 @@ public final class SleepEngine {
 
         if (settings.bool("show_sleepers_in_chat") && !newlySleeping.isEmpty()) {
             int more = Math.max(0, required - sleepCount);
+            String suffix = more > 0 ? " Need " + more + " more." : "";
             for (ServerPlayer p : newlySleeping) {
                 server.getPlayerList().broadcastSystemMessage(Component.literal(
                         p.getName().getString() + " is sleeping, " + sleepCount + " of " + required
-                                + " players required to sleep, " + more + " more required."), false);
+                                + " required." + suffix), false);
             }
         }
 
@@ -117,6 +110,8 @@ public final class SleepEngine {
             }
         } else {
             accelerating = false;
+            // AFK-excluded: drive the skip ourselves once the non-AFK requirement is met (fires
+            // no later than vanilla; needed when AFK players would otherwise inflate the count).
             if (excludeAfk && sleepCount >= required && deep >= 1) {
                 setGamerule(server, 0);
                 restoreGameruleAtTick = now + 10;

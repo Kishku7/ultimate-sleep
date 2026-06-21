@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -51,6 +52,17 @@ public final class UltimateSleepScreen extends Screen {
 
     public UltimateSleepScreen() {
         super(Component.literal("Ultimate Sleep"));
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        int pW = 260, pH = 204;
+        int left = (this.width - pW) / 2, top = (this.height - pH) / 2;
+        g.fill(left - 2, top - 2, left + pW + 2, top + pH + 2, 0xFF000000);
+        g.fill(left - 1, top - 1, left + pW + 1, top + pH + 1, 0xFF2F2F2F);
+        g.fill(left, top, left + pW, top + pH, 0xFF121212);
+        g.fill(left, top, left + pW, top + 22, 0xFF1C1C1C);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
     }
 
     public void refresh() {

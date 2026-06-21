@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -26,6 +27,15 @@ public final class VoteScreen extends Screen {
         super(Component.literal("Sleep Vote"));
         this.question = question;
         this.ticksLeft = Math.max(1, seconds) * 20;
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        int barW = 330, barH = 34;
+        int barX = (this.width - barW) / 2, barY = this.height - 58;
+        g.fill(barX - 2, barY - 2, barX + barW + 2, barY + barH + 2, 0xFF000000);
+        g.fill(barX, barY, barX + barW, barY + barH, 0xF0121212);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
     }
 
     private int secs() {

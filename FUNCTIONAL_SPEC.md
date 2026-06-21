@@ -206,7 +206,7 @@ sleep-admin roster; AFK tracking + notify-on-any-change (incl. movement) + /afk 
 /usleep admin afk; SIMPLE-mode gamerule drive + per-sleeper broadcasts; /usleep auto (dusk
 auto-bed + miss notice); VOTE mode command path (/usleep yes|no, auto-start on first sleeper,
 30s window, bed=auto-yes, AFK excluded, pass rules, gamerule-toggle skip); mode-aware gamerule; AFK-EXCLUDED requirement (SIMPLE drives skip itself when exclude_afk); REWARDS on wake (regen / golden-carrot drop-if-full / speed).
-PENDING (client phase only): vote popup (client), CD pixel-exact theming, per-player-only mob highlight; (also: sleep_anytime+ACCELERATE composition, perf tuning). Prior:
+PENDING (client phase only): CD pixel-exact theming of all screens (needs the 26.x GuiRenderState API -- current screens are widget-only), per-player-only mob highlight; (also: sleep_anytime+ACCELERATE composition, perf tuning). Prior:
 world-progression DONE (crops via random-tick boost; smelting/husbandry/despawn via skip-tick advance); accessibility DONE except highlight: sleep_ignore_monsters (EntitySleepEvents), sleep_anytime + ignore_bed_too_far (ServerPlayerSleepMixin @Redirects); highlight_blocking_mobs needs client; auto-sleep home-bed +
 Travelers' Backpack path, client GUI + vote popup.
 

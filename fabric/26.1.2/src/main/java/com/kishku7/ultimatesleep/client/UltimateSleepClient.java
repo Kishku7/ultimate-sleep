@@ -2,17 +2,19 @@ package com.kishku7.ultimatesleep.client;
 
 import com.kishku7.ultimatesleep.net.UsleepOpenPayload;
 import com.kishku7.ultimatesleep.net.UsleepSyncPayload;
+import com.kishku7.ultimatesleep.net.UsleepVoteEndPayload;
+import com.kishku7.ultimatesleep.net.UsleepVoteStartPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 
 /**
- * Client entrypoint for the admin GUI. Two server-driven hooks:
- *   - SYNC payload: refresh the {@link ClientState} cache (and any open screen).
- *   - OPEN payload: open the panel (the server sends this in response to /usleep gui, only to
- *     clients that have this mod -- vanilla clients get a chat hint instead).
+ * Client entrypoint. Server-driven hooks:
+ *   - SYNC: refresh the settings cache (and any open admin screen).
+ *   - OPEN: open the admin panel (sent for /usleep gui to modded clients).
+ *   - VOTE_START / VOTE_END: show / hide the bottom-bar sleep-vote prompt.
  *
- * The GUI is optional client polish; everything is reachable via the /usleep commands.
+ * The GUI is optional client polish; everything is reachable via /usleep commands.
  */
 public final class UltimateSleepClient implements ClientModInitializer {
 
@@ -28,5 +30,21 @@ public final class UltimateSleepClient implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(UsleepOpenPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> Minecraft.getInstance().setScreen(new UltimateSleepScreen())));
+
+        ClientPlayNetworking.registerGlobalReceiver(UsleepVoteStartPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> {
+                    Minecraft mc = Minecraft.getInstance();
+                    if (mc.screen == null) {
+                        mc.setScreen(new VoteScreen(payload.question(), payload.seconds()));
+                    }
+                }));
+
+        ClientPlayNetworking.registerGlobalReceiver(UsleepVoteEndPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> {
+                    Minecraft mc = Minecraft.getInstance();
+                    if (mc.screen instanceof VoteScreen) {
+                        mc.setScreen(null);
+                    }
+                }));
     }
 }

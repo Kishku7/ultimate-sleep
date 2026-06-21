@@ -64,6 +64,11 @@ public final class VoteManager {
                 for (ServerPlayer s : sleepers) votes.put(s.getUUID(), true); // auto-yes the starter(s)
                 broadcast(server, "A sleep vote has started! Use /usleep yes or /usleep no ("
                         + settings.integer("vote_duration_seconds") + "s).");
+                for (ServerPlayer pl : players) {
+                    if (!pl.isSpectator() && !UltimateSleep.afk().isAfk(pl.getUUID()) && !votes.containsKey(pl.getUUID())) {
+                        com.kishku7.ultimatesleep.net.UltimateSleepNet.sendVoteStart(pl, "Do you want to allow sleep without you?", settings.integer("vote_duration_seconds"));
+                    }
+                }
             }
             return;
         }
@@ -110,12 +115,24 @@ public final class VoteManager {
             default -> yes > no; // MAJORITY_CAST
         };
 
+        for (Map.Entry<UUID, Boolean> e : votes.entrySet()) {
+            ServerPlayer voter = server.getPlayerList().getPlayer(e.getKey());
+            if (voter != null) {
+                voter.sendSystemMessage(Component.literal(e.getValue() == pass
+                        ? "[Ultimate Sleep] Your sleep vote carried."
+                        : "[Ultimate Sleep] You were outvoted."));
+            }
+        }
+        for (ServerPlayer pl : players) {
+            com.kishku7.ultimatesleep.net.UltimateSleepNet.sendVoteEnd(pl);
+        }
+
         if (pass) {
-            broadcast(server, "Sleep vote PASSED (" + yes + " yes / " + no + " no) -- skipping the night.");
+            broadcast(server, "Sleep vote passed -- skipping the night.");
             setGamerule(server, 0);
             restoreGameruleAtTick = server.getTickCount() + 10;
         } else {
-            broadcast(server, "Sleep vote FAILED (" + yes + " yes / " + no + " no) -- the night continues.");
+            broadcast(server, "Sleep vote failed -- the night continues.");
         }
         active = false;
         votes.clear();

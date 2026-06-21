@@ -29,12 +29,18 @@ public final class UltimateSleepNet {
         PayloadTypeRegistry.serverboundPlay().register(UsleepRosterPayload.TYPE, UsleepRosterPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(UsleepSyncPayload.TYPE, UsleepSyncPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(UsleepOpenPayload.TYPE, UsleepOpenPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(UsleepVotePayload.TYPE, UsleepVotePayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(UsleepVoteStartPayload.TYPE, UsleepVoteStartPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(UsleepVoteEndPayload.TYPE, UsleepVoteEndPayload.CODEC);
     }
 
     /** Register server-side receivers. */
     public static void registerServer() {
         ServerPlayNetworking.registerGlobalReceiver(UsleepRequestPayload.TYPE, (payload, context) ->
                 sendSyncTo(context.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(UsleepVotePayload.TYPE, (payload, context) ->
+                UltimateSleep.vote().castVote(context.player(), payload.yes()));
 
         ServerPlayNetworking.registerGlobalReceiver(UsleepSetPayload.TYPE, (payload, context) -> {
             ServerPlayer p = context.player();
@@ -78,6 +84,18 @@ public final class UltimateSleepNet {
         sendSyncTo(p);
         ServerPlayNetworking.send(p, new UsleepOpenPayload());
         return true;
+    }
+
+    public static void sendVoteStart(ServerPlayer p, String question, int seconds) {
+        if (ServerPlayNetworking.canSend(p, UsleepVoteStartPayload.TYPE)) {
+            ServerPlayNetworking.send(p, new UsleepVoteStartPayload(question, seconds));
+        }
+    }
+
+    public static void sendVoteEnd(ServerPlayer p) {
+        if (ServerPlayNetworking.canSend(p, UsleepVoteEndPayload.TYPE)) {
+            ServerPlayNetworking.send(p, new UsleepVoteEndPayload());
+        }
     }
 
     public static void sendSyncTo(ServerPlayer p) {

@@ -11,15 +11,19 @@ import net.minecraft.network.chat.Component;
 /**
  * The sleep-vote prompt: a non-pausing dark bar near the bottom (above the hotbar) with the
  * question on the left and green Yes / red No on the right. Voting goes over the back-channel;
- * closes on a vote, on the server ending the vote, or when the timer runs out. Each voter gets a
- * private win/lost chat message afterward.
+ * closes on a vote, on the server ending the vote, or when the timer runs out. When the server
+ * pushes live vote info (show_sleepers_on_vote_screen), a tally + sleeper line shows above the bar.
  */
 public final class VoteScreen extends Screen {
+
+    /** Latest server-pushed "Yes N / No M -- In bed: ..." line; empty hides it. */
+    public static volatile String infoLine = "";
 
     private static final int BAR_W = 330, BAR_H = 34;
     private final String question;
     private int ticksLeft;
     private StringWidget label;
+    private StringWidget info;
 
     public VoteScreen(String question, int seconds) {
         super(Component.literal("Sleep Vote"));
@@ -34,6 +38,9 @@ public final class VoteScreen extends Screen {
     @Override
     protected void init() {
         int y = barY() + 7;
+        info = new StringWidget(barX() + 4, barY() - 13, BAR_W - 8, 10,
+                Component.literal(infoLine), this.font);
+        addRenderableWidget(info);
         label = new StringWidget(barX() + 8, y + 3, BAR_W - 8 - 100, 12,
                 Component.literal(question + "  (" + secs() + "s)"), this.font);
         addRenderableWidget(label);
@@ -68,6 +75,9 @@ public final class VoteScreen extends Screen {
         if (label != null) {
             label.setMessage(Component.literal(question + "  (" + secs() + "s)"));
         }
+        if (info != null) {
+            info.setMessage(Component.literal(infoLine));
+        }
     }
 
     @Override
@@ -77,6 +87,7 @@ public final class VoteScreen extends Screen {
 
     @Override
     public void onClose() {
+        infoLine = "";
         Minecraft.getInstance().setScreen(null);
     }
 }

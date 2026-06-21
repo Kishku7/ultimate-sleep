@@ -32,6 +32,7 @@ public final class UltimateSleepNet {
         PayloadTypeRegistry.serverboundPlay().register(UsleepVotePayload.TYPE, UsleepVotePayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(UsleepVoteStartPayload.TYPE, UsleepVoteStartPayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(UsleepVoteEndPayload.TYPE, UsleepVoteEndPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(UsleepVoteInfoPayload.TYPE, UsleepVoteInfoPayload.CODEC);
     }
 
     /** Register server-side receivers. */
@@ -95,6 +96,12 @@ public final class UltimateSleepNet {
     public static void sendVoteEnd(ServerPlayer p) {
         if (ServerPlayNetworking.canSend(p, UsleepVoteEndPayload.TYPE)) {
             ServerPlayNetworking.send(p, new UsleepVoteEndPayload());
+        }
+    }
+
+    public static void sendVoteInfo(ServerPlayer p, int yes, int no, String sleepers) {
+        if (ServerPlayNetworking.canSend(p, UsleepVoteInfoPayload.TYPE)) {
+            ServerPlayNetworking.send(p, new UsleepVoteInfoPayload(yes, no, sleepers));
         }
     }
 

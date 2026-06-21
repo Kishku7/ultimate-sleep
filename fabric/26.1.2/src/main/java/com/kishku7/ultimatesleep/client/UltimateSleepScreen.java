@@ -16,7 +16,8 @@ import java.util.Map;
 /**
  * The Ultimate Sleep admin panel: paginated (8 setting pages + a Sleep-Admin page), reading values
  * from {@link ClientState} (server-synced) and writing over the back-channel; the server validates
- * permissions and re-syncs. CD-themed via the 26.x render pipeline (dark panel + ThemedButtons).
+ * permissions and re-syncs. CD-themed via the 26.x render pipeline (dark panel + ThemedButtons +
+ * dark, borderless edit fields painted by the screen).
  */
 public final class UltimateSleepScreen extends Screen {
 
@@ -61,6 +62,9 @@ public final class UltimateSleepScreen extends Screen {
         g.fill(left - 1, top - 1, left + PW + 1, top + PH + 1, 0xFF2F2F2F);
         g.fill(left, top, left + PW, top + PH, 0xFF121212);
         g.fill(left, top, left + PW, top + 22, 0xFF1C1C1C);
+        // dark backing for each (borderless) edit field
+        for (EditBox eb : pageEdits.values()) paintField(g, eb);
+        if (page == ADMIN_PAGE && addAdminField != null) paintField(g, addAdminField);
         // admin-list scrollbar
         if (page == ADMIN_PAGE) {
             int n = ClientState.admins.size();
@@ -74,6 +78,12 @@ public final class UltimateSleepScreen extends Screen {
             }
         }
         super.extractRenderState(g, mouseX, mouseY, partialTick);
+    }
+
+    private static void paintField(GuiGraphicsExtractor g, EditBox eb) {
+        int x = eb.getX(), y = eb.getY(), w = eb.getWidth(), h = eb.getHeight();
+        g.fill(x - 1, y - 1, x + w + 1, y + h + 1, 0xFF000000);
+        g.fill(x, y, x + w, y + h, eb.isFocused() ? 0xFF2A2A2A : 0xFF1E1E1E);
     }
 
     public void refresh() {
@@ -145,6 +155,8 @@ public final class UltimateSleepScreen extends Screen {
             eb.setMaxLength(32);
             eb.setValue(val);
             eb.setEditable(ClientState.canSet);
+            eb.setBordered(false);
+            eb.setTextColor(0xFFE6E6E6);
             pageEdits.put(key, eb);
             addRenderableWidget(eb);
         }
@@ -175,6 +187,8 @@ public final class UltimateSleepScreen extends Screen {
         addAdminField.setMaxLength(16);
         addAdminField.setHint(Component.literal("player name"));
         addAdminField.setEditable(ClientState.canAdmin);
+        addAdminField.setBordered(false);
+        addAdminField.setTextColor(0xFFE6E6E6);
         addRenderableWidget(addAdminField);
         ThemedButton add = new ThemedButton(left + PW - 8 - 50, addY, 50, 20, Component.literal("Add"), () -> {
             String n = addAdminField.getValue().trim();

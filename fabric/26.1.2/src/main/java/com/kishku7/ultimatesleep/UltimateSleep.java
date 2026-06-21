@@ -7,6 +7,7 @@ import com.kishku7.ultimatesleep.config.Settings;
 import com.kishku7.ultimatesleep.net.UltimateSleepNet;
 import com.kishku7.ultimatesleep.permission.SleepPermissions;
 import com.kishku7.ultimatesleep.sleep.AutoSleepManager;
+import com.kishku7.ultimatesleep.sleep.MobHighlight;
 import com.kishku7.ultimatesleep.sleep.RewardManager;
 import com.kishku7.ultimatesleep.sleep.SleepEngine;
 import com.kishku7.ultimatesleep.sleep.VoteManager;
@@ -17,8 +18,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.util.EventResult;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -28,8 +28,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Ultimate Sleep -- common (server + integrated-server) entrypoint. Wires settings, the
  * permission roster, all per-tick managers, the accessibility sleep-event overrides, the /usleep
- * command tree, and the conditional /afk redirect alias. The mode-dependent vanilla gamerule is
- * applied on server start. The client admin panel + vote popup are the deferred client phase.
+ * command tree, and the conditional /afk redirect alias. The night-skip gamerule is pinned on
+ * start (the mod owns every skip). The client admin panel + vote popup are optional client polish.
  */
 public final class UltimateSleep implements ModInitializer {
 
@@ -70,17 +70,19 @@ public final class UltimateSleep implements ModInitializer {
             AUTO.tick(server);
             VOTE.tick(server);
             REWARDS.tick(server);
+            MobHighlight.tick(server);
         });
 
         ServerLifecycleEvents.SERVER_STARTED.register(ENGINE::applyConfig);
 
-        // Accessibility: sleep despite nearby monsters; optionally glow the blockers so they're findable.
-        EntitySleepEvents.ALLOW_NEARBY_MONSTERS.register((player, sleepingPos, vanillaResult) -> {
-            if (SETTINGS.bool("highlight_blocking_mobs") && player.level() instanceof ServerLevel sl) {
+        // Accessibility: sleep despite nearby monsters; optionally glow the blockers for the sleeper only.
+        EntitySleepEvents.ALLOW_NEARBY_MONSTERS.register((entity, sleepingPos, vanillaResult) -> {
+            if (SETTINGS.bool("highlight_blocking_mobs")
+                    && entity instanceof ServerPlayer sp && sp.level() instanceof ServerLevel sl) {
                 Vec3 c = Vec3.atBottomCenterOf(sleepingPos);
                 AABB box = new AABB(c.x - 8.0, c.y - 5.0, c.z - 8.0, c.x + 8.0, c.y + 5.0, c.z + 8.0);
-                for (Monster m : sl.getEntitiesOfClass(Monster.class, box, mob -> mob.isPreventingPlayerRest(sl, player))) {
-                    m.addEffect(new MobEffectInstance(MobEffects.GLOWING, 200, 0, false, false), null);
+                for (Monster m : sl.getEntitiesOfClass(Monster.class, box, mob -> mob.isPreventingPlayerRest(sl, sp))) {
+                    MobHighlight.glowFor(sp, m, 200);
                 }
             }
             if (SETTINGS.bool("sleep_ignore_monsters")) return EventResult.ALLOW;

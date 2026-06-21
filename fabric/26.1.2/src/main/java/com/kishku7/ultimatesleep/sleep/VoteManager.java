@@ -2,6 +2,7 @@ package com.kishku7.ultimatesleep.sleep;
 
 import com.kishku7.ultimatesleep.UltimateSleep;
 import com.kishku7.ultimatesleep.config.Settings;
+import com.kishku7.ultimatesleep.net.UltimateSleepNet;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,7 +22,8 @@ import java.util.UUID;
  * window the result is tallied per vote_pass_rule. On PASS we ask the engine to skip the night
  * (engine.requestSkip()) -- ServerLevelSleepSkipMixin then lets vanilla advance time, wake
  * sleepers, and reset weather. The gamerule stays pinned at 101 (mod owns every skip). On FAIL
- * the night continues.
+ * the night continues. While a vote runs, a live tally + sleeper list is pushed to the popups
+ * once a second (show_sleepers_on_vote_screen).
  */
 public final class VoteManager {
 
@@ -58,7 +60,7 @@ public final class VoteManager {
                         + settings.integer("vote_duration_seconds") + "s).");
                 for (ServerPlayer pl : players) {
                     if (!pl.isSpectator() && !UltimateSleep.afk().isAfk(pl.getUUID()) && !votes.containsKey(pl.getUUID())) {
-                        com.kishku7.ultimatesleep.net.UltimateSleepNet.sendVoteStart(pl, "Do you want to allow sleep without you?", settings.integer("vote_duration_seconds"));
+                        UltimateSleepNet.sendVoteStart(pl, "Do you want to allow sleep without you?", settings.integer("vote_duration_seconds"));
                     }
                 }
             }
@@ -67,6 +69,24 @@ public final class VoteManager {
 
         // Active: getting into bed mid-vote is an auto-yes.
         for (ServerPlayer s : sleepers) votes.putIfAbsent(s.getUUID(), true);
+
+        // Live tally + sleeper list to the open popups, ~once a second.
+        if (settings.bool("show_sleepers_on_vote_screen") && (now - startTick) % 20 == 0) {
+            int yes = 0;
+            for (boolean v : votes.values()) if (v) yes++;
+            int no = votes.size() - yes;
+            StringBuilder sb = new StringBuilder();
+            for (ServerPlayer s : sleepers) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(s.getName().getString());
+            }
+            String names = sb.toString();
+            for (ServerPlayer pl : players) {
+                if (!pl.isSpectator() && !UltimateSleep.afk().isAfk(pl.getUUID())) {
+                    UltimateSleepNet.sendVoteInfo(pl, yes, no, names);
+                }
+            }
+        }
 
         if (now - startTick >= (long) settings.integer("vote_duration_seconds") * 20L) {
             finishVote(server, players);
@@ -116,7 +136,7 @@ public final class VoteManager {
             }
         }
         for (ServerPlayer pl : players) {
-            com.kishku7.ultimatesleep.net.UltimateSleepNet.sendVoteEnd(pl);
+            UltimateSleepNet.sendVoteEnd(pl);
         }
 
         if (pass) {

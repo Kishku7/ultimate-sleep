@@ -3,6 +3,7 @@
   "package": "com.kishku7.ultimatesleep.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "EntityFlagsAccessor",
     "ServerPlayerSleepMixin",
     "ServerLevelSleepSkipMixin",
     "ServerLevelWeatherMixin",

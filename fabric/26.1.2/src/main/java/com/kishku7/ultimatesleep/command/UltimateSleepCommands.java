@@ -5,30 +5,44 @@ import com.kishku7.ultimatesleep.config.Settings;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.List;
+
 /**
- * The /usleep command tree.
- *
- * Open to all: status, query, afk, auto, yes, no.
- * Tiered (FUNCTIONAL_SPEC.md section 2; checks in SleepPermissions):
- *   /usleep set <key> <value>            -- op 2 or sleep-admin
- *   /usleep admin set <key> <value>      -- op 3 or sleep-admin
- *   /usleep admin afk <player>           -- op 3 or sleep-admin
- *   /usleep admin admins add|remove|list -- op 3 or sleep-admin
- *
- * AFK status messages are sent centrally by AfkManager on any transition, so the afk commands
- * here do not message the affected player themselves.
- *
- * Returns the /usleep root node so /afk can redirect to the "afk" child (AfkCommandManager).
+ * The /usleep command tree. Open: status, query, afk, auto, yes, no.
+ * Tiered: /usleep set (op2/sleep-admin), /usleep admin ... (op3/sleep-admin).
+ * Setting keys (and values for bool/enum) tab-complete.
  */
 public final class UltimateSleepCommands {
 
     private UltimateSleepCommands() {}
+
+    /** Tab-complete setting keys. */
+    private static final SuggestionProvider<CommandSourceStack> KEY_SUGGESTIONS = (ctx, builder) ->
+            SharedSuggestionProvider.suggest(UltimateSleep.settings().all().keySet(), builder);
+
+    /** Tab-complete values for the key already typed (bool/enum only). */
+    private static final SuggestionProvider<CommandSourceStack> VALUE_SUGGESTIONS = (ctx, builder) -> {
+        try {
+            Settings.Entry e = UltimateSleep.settings().get(StringArgumentType.getString(ctx, "key"));
+            if (e != null && e.type == Settings.Type.BOOL) {
+                return SharedSuggestionProvider.suggest(List.of("true", "false"), builder);
+            }
+            if (e != null && e.type == Settings.Type.ENUM) {
+                return SharedSuggestionProvider.suggest(e.allowed, builder);
+            }
+        } catch (Exception ignored) {
+            // key not parsed yet -> no value suggestions
+        }
+        return builder.buildFuture();
+    };
 
     public static LiteralCommandNode<CommandSourceStack> register(CommandDispatcher<CommandSourceStack> dispatcher) {
         return dispatcher.register(Commands.literal("usleep")
@@ -40,14 +54,14 @@ public final class UltimateSleepCommands {
                 .then(Commands.literal("no").executes(ctx -> vote(ctx, false)))
                 .then(Commands.literal("set")
                         .requires(src -> UltimateSleep.permissions().canSet(src))
-                        .then(Commands.argument("key", StringArgumentType.word())
-                                .then(Commands.argument("value", StringArgumentType.greedyString())
+                        .then(Commands.argument("key", StringArgumentType.word()).suggests(KEY_SUGGESTIONS)
+                                .then(Commands.argument("value", StringArgumentType.greedyString()).suggests(VALUE_SUGGESTIONS)
                                         .executes(UltimateSleepCommands::doSet))))
                 .then(Commands.literal("admin")
                         .requires(src -> UltimateSleep.permissions().canAdmin(src))
                         .then(Commands.literal("set")
-                                .then(Commands.argument("key", StringArgumentType.word())
-                                        .then(Commands.argument("value", StringArgumentType.greedyString())
+                                .then(Commands.argument("key", StringArgumentType.word()).suggests(KEY_SUGGESTIONS)
+                                        .then(Commands.argument("value", StringArgumentType.greedyString()).suggests(VALUE_SUGGESTIONS)
                                                 .executes(UltimateSleepCommands::doSet))))
                         .then(Commands.literal("afk")
                                 .then(Commands.argument("player", StringArgumentType.word())
@@ -63,27 +77,29 @@ public final class UltimateSleepCommands {
                                         .executes(UltimateSleepCommands::adminsList)))));
     }
 
+    private static String shown(Settings.Entry e) {
+        Object v = e.get();
+        return e.type == Settings.Type.BOOL ? String.valueOf(v).toUpperCase() : String.valueOf(v);
+    }
+
     private static int status(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         int afkCount = src.getServer() == null ? 0 : UltimateSleep.afk().afkCount(src.getServer());
         src.sendSystemMessage(Component.literal(
-                "[Ultimate Sleep] enabled=" + UltimateSleep.settings().bool("enabled")
-                        + ", mode=" + UltimateSleep.settings().string("requirement_mode")
-                        + ", required=" + UltimateSleep.settings().integer("required_sleep_percentage") + "%"
-                        + ", AFK players=" + afkCount));
+                "[Ultimate Sleep] mode=" + UltimateSleep.settings().string("requirement_mode")
+                        + " required=" + UltimateSleep.settings().integer("required_sleep_percentage") + "%"
+                        + " afk=" + afkCount));
         return 1;
     }
 
-    /** Full settings dump -- available to ANY user. */
+    /** Compact settings dump (key = value), no wrapping. Available to any user. */
     private static int query(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        src.sendSystemMessage(Component.literal("[Ultimate Sleep] current settings:"));
+        src.sendSystemMessage(Component.literal("[Ultimate Sleep] settings:"));
         for (Settings.Entry e : UltimateSleep.settings().all().values()) {
-            src.sendSystemMessage(Component.literal(
-                    "  " + e.key + " = " + e.get() + "  (" + e.type + ") - " + e.description));
+            src.sendSystemMessage(Component.literal(e.key + " = " + shown(e)));
         }
-        src.sendSystemMessage(Component.literal(
-                "  /afk owner = " + UltimateSleep.afkCommands().ownerLabel()));
+        src.sendSystemMessage(Component.literal("afk_owner = " + UltimateSleep.afkCommands().ownerLabel()));
         return 1;
     }
 
@@ -94,7 +110,7 @@ public final class UltimateSleepCommands {
             src.sendSystemMessage(Component.literal("Only players can toggle AFK."));
             return 0;
         }
-        UltimateSleep.afk().toggleManual(p); // AfkManager notifies the player on the next tick
+        UltimateSleep.afk().toggleManual(p); // AfkManager sends the confirmation
         return 1;
     }
 
@@ -110,8 +126,7 @@ public final class UltimateSleepCommands {
             return 0;
         }
         boolean on = UltimateSleep.autoSleep().toggle(p);
-        src.sendSystemMessage(Component.literal("[Ultimate Sleep] Auto-sleep is now "
-                + (on ? "ON" : "OFF") + " for you."));
+        src.sendSystemMessage(Component.literal("[Ultimate Sleep] Auto-sleep is now " + (on ? "ON" : "OFF") + " for you."));
         return 1;
     }
 
@@ -126,7 +141,6 @@ public final class UltimateSleepCommands {
         return 1;
     }
 
-    /** Shared settings setter for /usleep set and /usleep admin set. */
     private static int doSet(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         String key = StringArgumentType.getString(ctx, "key");
@@ -138,10 +152,7 @@ public final class UltimateSleepCommands {
         }
         UltimateSleep.settings().save();
         if (src.getServer() != null) UltimateSleep.engine().applyConfig(src.getServer());
-        Settings.Entry e = UltimateSleep.settings().get(key);
-        Object resolved = e.get();
-        String shown = (e.type == Settings.Type.BOOL) ? String.valueOf(resolved).toUpperCase() : String.valueOf(resolved);
-        src.sendSystemMessage(Component.literal("[Ultimate Sleep] " + key + " is set to " + shown));
+        src.sendSystemMessage(Component.literal("[Ultimate Sleep] " + key + " is set to " + shown(UltimateSleep.settings().get(key))));
         return 1;
     }
 
@@ -154,7 +165,7 @@ public final class UltimateSleepCommands {
             src.sendSystemMessage(Component.literal("[Ultimate Sleep] player not found / offline: " + name));
             return 0;
         }
-        UltimateSleep.afk().setManual(target, true); // target notified by AfkManager on next tick
+        UltimateSleep.afk().setManual(target, true);
         src.sendSystemMessage(Component.literal("[Ultimate Sleep] set " + name + " AFK."));
         return 1;
     }

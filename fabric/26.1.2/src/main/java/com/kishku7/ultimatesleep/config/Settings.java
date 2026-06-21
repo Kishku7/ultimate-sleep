@@ -8,7 +8,6 @@ import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +24,7 @@ import java.util.Map;
  */
 public final class Settings {
 
-    public enum Type { BOOL, INT, ENUM, STRING }
+    public enum Type { BOOL, INT, ENUM, STRING, PERCENT }
 
     public static final class Entry {
         public final String key;
@@ -58,12 +57,12 @@ public final class Settings {
         reg("enabled", Type.BOOL, true, "Master switch for Ultimate Sleep behavior.");
         // engine
         regEnum("requirement_mode", "SIMPLE", "How a skip is triggered.", List.of("SIMPLE", "VOTE"));
-        reg("required_sleep_percentage", Type.INT, 50, "Percent of eligible players needed (SIMPLE).");
+        reg("required_sleep_percentage", Type.PERCENT, 50, "Percent of eligible players needed (SIMPLE).");
         reg("exclude_afk_from_requirement", Type.BOOL, true, "AFK players don't count toward the requirement.");
         reg("vote_duration_seconds", Type.INT, 30, "Voting window (VOTE).");
         regEnum("vote_pass_rule", "MAJORITY_NON_AFK", "Vote pass rule.",
                 List.of("MAJORITY_CAST", "PERCENT_CAST", "MAJORITY_NON_AFK"));
-        reg("vote_pass_percentage", Type.INT, 50, "Percent of votes cast to pass (PERCENT_CAST).");
+        reg("vote_pass_percentage", Type.PERCENT, 50, "Percent of votes cast to pass (PERCENT_CAST).");
         regEnum("skip_mode", "INSTANT", "How the triggered skip is carried out.", List.of("INSTANT", "ACCELERATE"));
         reg("accelerate_multiplier", Type.INT, 60, "Sim ticks per real tick (ACCELERATE).");
         reg("preserve_weather", Type.BOOL, false, "Keep rain/storms across a skip.");
@@ -81,7 +80,7 @@ public final class Settings {
         reg("reward_regeneration_minutes", Type.INT, 5, "Regeneration duration (minutes).");
         reg("reward_golden_carrot", Type.BOOL, false, "Give a golden carrot (drops if inventory full).");
         reg("reward_speed_boost", Type.BOOL, false, "Grant a movement-speed boost on a successful sleep.");
-        reg("reward_speed_boost_percent", Type.INT, 25, "Speed boost percent.");
+        reg("reward_speed_boost_percent", Type.PERCENT, 25, "Speed boost percent.");
         reg("reward_speed_boost_minutes", Type.INT, 5, "Speed boost duration (minutes).");
         // world progression
         reg("world_progression_enabled", Type.BOOL, false, "Master toggle for world progression on sleep.");
@@ -116,8 +115,17 @@ public final class Settings {
         if (e == null) return "Unknown setting: " + key;
         try {
             switch (e.type) {
-                case BOOL -> e.set(Boolean.parseBoolean(raw));
+                case BOOL -> {
+                    Boolean b = parseBool(raw);
+                    if (b == null) return "Invalid boolean '" + raw + "' for " + key + " (use true/false, yes/no, 1/0, on/off)";
+                    e.set(b);
+                }
                 case INT -> e.set(Integer.parseInt(raw));
+                case PERCENT -> {
+                    Integer v = parsePercent(raw);
+                    if (v == null) return "Invalid percentage '" + raw + "' for " + key + " (use e.g. 50, 50%, or 1/2)";
+                    e.set(v);
+                }
                 case STRING -> e.set(raw);
                 case ENUM -> {
                     String up = raw.toUpperCase();
@@ -160,7 +168,36 @@ public final class Settings {
         }
     }
 
-    // (kept for reference; allowed values are exposed via Entry.allowed)
-    @SuppressWarnings("unused")
-    private static List<String> csv(String s) { return Arrays.asList(s.split(",")); }
+        /** Flexible percentage parse: "50", "50%", "1/2", or "0.5" -> 0..100; else null. */
+    private static Integer parsePercent(String raw) {
+        String s = raw.trim().toLowerCase();
+        if (s.endsWith("%")) s = s.substring(0, s.length() - 1).trim();
+        try {
+            int val;
+            if (s.contains("/")) {
+                String[] parts = s.split("/");
+                if (parts.length != 2) return null;
+                double den = Double.parseDouble(parts[1].trim());
+                if (den == 0) return null;
+                val = (int) Math.round(Double.parseDouble(parts[0].trim()) / den * 100.0);
+            } else if (s.contains(".")) {
+                double d = Double.parseDouble(s);
+                val = d <= 1.0 ? (int) Math.round(d * 100.0) : (int) Math.round(d);
+            } else {
+                val = Integer.parseInt(s);
+            }
+            return Math.max(0, Math.min(100, val));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    /** Flexible boolean parse: true/yes/1/on -> true; false/no/0/off -> false; else null. Case-insensitive. */
+    private static Boolean parseBool(String raw) {
+        String s = raw.trim().toLowerCase();
+        return switch (s) {
+            case "1", "yes", "true", "on" -> Boolean.TRUE;
+            case "0", "no", "false", "off" -> Boolean.FALSE;
+            default -> null;
+        };
+    }
 }

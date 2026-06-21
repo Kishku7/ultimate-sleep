@@ -199,12 +199,14 @@ Verified live: mod init, /usleep status + query, /afk redirect alias, sleep-admi
 add/list + JSON persistence, and SIMPLE mode applying `gamerule playersSleepingPercentage 50`
 on start.
 
-IMPLEMENTED: settings (full section-10 set, ENUM type, JSON persistence), permission tiers
-(`/usleep set` op2/sleep-admin, `/usleep admin ...` op3/sleep-admin) + persisted sleep-admin
-roster, AFK tracking + `/afk` alias + `/usleep admin afk`, SIMPLE-mode gamerule drive +
-per-sleeper broadcasts.
-PENDING: AFK-excluded requirement, ACCELERATE, preserve_weather, VOTE mode + networking,
-rewards, world-progression, auto-sleep, accessibility toggles, GUI.
+IMPLEMENTED: settings (full set, ENUM, JSON persistence); permission tiers + persisted
+sleep-admin roster; AFK tracking + notify-on-any-change (incl. movement) + /afk alias +
+/usleep admin afk; SIMPLE-mode gamerule drive + per-sleeper broadcasts; /usleep auto (dusk
+auto-bed + miss notice); VOTE mode command path (/usleep yes|no, auto-start on first sleeper,
+30s window, bed=auto-yes, AFK excluded, pass rules, gamerule-toggle skip); mode-aware gamerule.
+PENDING: AFK-excluded requirement count, ACCELERATE + preserve_weather (need 26.x clock/mixin),
+rewards on wake, world-progression sim, accessibility toggles (mixins), auto-sleep home-bed +
+Travelers' Backpack path, client GUI + vote popup.
 
 ## 12. Roadmap / TODO
 

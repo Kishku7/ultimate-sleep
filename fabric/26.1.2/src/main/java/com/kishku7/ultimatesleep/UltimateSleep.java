@@ -6,6 +6,7 @@ import com.kishku7.ultimatesleep.command.UltimateSleepCommands;
 import com.kishku7.ultimatesleep.config.Settings;
 import com.kishku7.ultimatesleep.permission.SleepPermissions;
 import com.kishku7.ultimatesleep.sleep.AutoSleepManager;
+import com.kishku7.ultimatesleep.sleep.RewardManager;
 import com.kishku7.ultimatesleep.sleep.SleepEngine;
 import com.kishku7.ultimatesleep.sleep.VoteManager;
 import net.fabricmc.api.ModInitializer;
@@ -19,9 +20,9 @@ import org.slf4j.LoggerFactory;
  * Ultimate Sleep -- common (server + integrated-server) entrypoint.
  *
  * Wires: settings (load/persist), the sleep-admin permission roster, and the per-tick managers
- * (AFK tracking + notifications, SIMPLE-mode engine + messaging, auto-sleep at dusk, VOTE-mode
- * voting), the /usleep command tree, and the conditional /afk redirect alias. The mode-dependent
- * vanilla gamerule is applied on server start.
+ * (AFK tracking + notifications, SIMPLE-mode engine + messaging + AFK-excluded skip, auto-sleep at
+ * dusk, VOTE-mode voting, rewards-on-wake), the /usleep command tree, and the conditional /afk
+ * redirect alias. The mode-dependent vanilla gamerule is applied on server start.
  *
  * The client admin panel + vote popup are deferred to the last phase before 1.0 (FUNCTIONAL_SPEC.md).
  */
@@ -37,6 +38,7 @@ public final class UltimateSleep implements ModInitializer {
     private static final SleepEngine ENGINE = new SleepEngine(SETTINGS);
     private static final AutoSleepManager AUTO = new AutoSleepManager(SETTINGS);
     private static final VoteManager VOTE = new VoteManager(SETTINGS);
+    private static final RewardManager REWARDS = new RewardManager(SETTINGS);
 
     public static Settings settings() { return SETTINGS; }
     public static AfkManager afk() { return AFK; }
@@ -59,6 +61,7 @@ public final class UltimateSleep implements ModInitializer {
             ENGINE.tick(server);
             AUTO.tick(server);
             VOTE.tick(server);
+            REWARDS.tick(server);
         });
 
         ServerLifecycleEvents.SERVER_STARTED.register(ENGINE::applyConfig);

@@ -192,7 +192,7 @@ Built against MC 26.1.2 (Fabric Loom 1.16, Java 25, mojmap-native). `fabric.mod.
 `src.getPlayer()`, `sendSystemMessage`. Watch the 26.2 client API delta (e.g.
 `Minecraft.setScreen` removed) when the GUI/vote-popup lands.
 
-## Build status (2026-06-20)
+## Build status (2026-06-20) -- v0.4.0
 
 0.1.0 builds GREEN and SMOKETESTED on a Fabric 26.1 server (clean boot, no errors).
 Verified live: mod init, /usleep status + query, /afk redirect alias, sleep-admin roster
@@ -203,8 +203,8 @@ IMPLEMENTED: settings (full set, ENUM, JSON persistence); permission tiers + per
 sleep-admin roster; AFK tracking + notify-on-any-change (incl. movement) + /afk alias +
 /usleep admin afk; SIMPLE-mode gamerule drive + per-sleeper broadcasts; /usleep auto (dusk
 auto-bed + miss notice); VOTE mode command path (/usleep yes|no, auto-start on first sleeper,
-30s window, bed=auto-yes, AFK excluded, pass rules, gamerule-toggle skip); mode-aware gamerule.
-PENDING: AFK-excluded requirement count, ACCELERATE + preserve_weather (need 26.x clock/mixin),
+30s window, bed=auto-yes, AFK excluded, pass rules, gamerule-toggle skip); mode-aware gamerule; AFK-EXCLUDED requirement (SIMPLE drives skip itself when exclude_afk); REWARDS on wake (regen / golden-carrot drop-if-full / speed).
+PENDING: ACCELERATE + preserve_weather (need 26.x clock/mixin),
 rewards on wake, world-progression sim, accessibility toggles (mixins), auto-sleep home-bed +
 Travelers' Backpack path, client GUI + vote popup.
 

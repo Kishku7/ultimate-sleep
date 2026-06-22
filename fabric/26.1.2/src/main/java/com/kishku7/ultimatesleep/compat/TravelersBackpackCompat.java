@@ -3,10 +3,12 @@ package com.kishku7.ultimatesleep.compat;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -16,13 +18,19 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 /**
  * Soft (runtime-only) integration with Travelers' Backpack: lets auto-sleep put a player to bed
  * "in place" using a sleeping bag when no real bed is reachable. We never compile against TB --
- * the mod is detected by id at runtime and its sleeping-bag block is referenced by registry id,
- * so Ultimate Sleep loads and runs identically whether or not TB is installed.
+ * the mod is detected by id at runtime, its sleeping-bag block is referenced by registry id, and
+ * the one TB helper we need (getWearingBackpack) is called reflectively. So Ultimate Sleep loads
+ * and runs identically whether or not TB is installed.
  *
- * Sleep-in-place mirrors how a bed works: place TB's sleeping-bag block (a BedBlock subclass) as
- * a foot+head pair at the player's feet, then call startSleepInBed on it. Ultimate Sleep owns the
- * cleanup (AutoSleepManager removes the block when the player wakes), so we do not rely on TB's own
- * config-gated removal.
+ * A "sleeping bag" the player can use is any of:
+ *   - a standalone TB sleeping-bag item in their hands or inventory, OR
+ *   - a TB backpack (worn via Trinkets, or carried in inventory/hands) that has a sleeping bag
+ *     ATTACHED -- stored on the backpack stack as the travelersbackpack "sleeping_bag_color"
+ *     data component (>= 0 means a bag is attached).
+ *
+ * Sleep-in-place mirrors how a bed works: place TB's sleeping-bag block (a BedBlock subclass) as a
+ * foot+head pair at the player's feet, then startSleepInBed on it. Ultimate Sleep owns the cleanup
+ * (AutoSleepManager removes the block when the player wakes).
  */
 public final class TravelersBackpackCompat {
 
@@ -36,21 +44,49 @@ public final class TravelersBackpackCompat {
         return FabricLoader.getInstance().isModLoaded(MOD_ID);
     }
 
-    /** True if the player is carrying a TB sleeping-bag item (hands or main inventory). */
+    /** True if the player can use a sleeping bag: a loose bag item, or one attached to their backpack. */
     public static boolean hasSleepingBag(ServerPlayer p) {
         if (!isPresent()) return false;
-        if (isSleepingBag(p.getMainHandItem()) || isSleepingBag(p.getOffhandItem())) return true;
+        // 1. Loose sleeping-bag item in hands / main inventory.
+        if (isSleepingBagItem(p.getMainHandItem()) || isSleepingBagItem(p.getOffhandItem())) return true;
         var inv = p.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) {
-            if (isSleepingBag(inv.getItem(i))) return true;
+            ItemStack s = inv.getItem(i);
+            if (isSleepingBagItem(s) || hasAttachedBag(s)) return true;
+        }
+        // 2. Bag attached to the worn backpack (TB resolves the Trinkets slot for us).
+        if (hasAttachedBag(p.getMainHandItem()) || hasAttachedBag(p.getOffhandItem())) return true;
+        return hasAttachedBag(wornBackpack(p));
+    }
+
+    private static boolean isSleepingBagItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return id != null && MOD_ID.equals(id.getNamespace()) && id.getPath().endsWith("sleeping_bag");
+    }
+
+    /** A TB backpack stack with a sleeping bag attached (sleeping_bag_color component >= 0). */
+    private static boolean hasAttachedBag(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        for (TypedDataComponent<?> comp : stack.getComponents()) {
+            Identifier id = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(comp.type());
+            if (id != null && MOD_ID.equals(id.getNamespace()) && id.getPath().contains("sleeping_bag")) {
+                Object v = comp.value();
+                return !(v instanceof Integer i) || i >= 0;
+            }
         }
         return false;
     }
 
-    private static boolean isSleepingBag(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return false;
-        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return id != null && MOD_ID.equals(id.getNamespace()) && id.getPath().endsWith("sleeping_bag");
+    /** The TB backpack the player is wearing (handles the Trinkets slot internally), or EMPTY. */
+    private static ItemStack wornBackpack(ServerPlayer p) {
+        try {
+            Class<?> c = Class.forName("com.tiviacz.travelersbackpack.attachment.AttachmentUtils");
+            Object r = c.getMethod("getWearingBackpack", Player.class).invoke(null, p);
+            return (r instanceof ItemStack s) ? s : ItemStack.EMPTY;
+        } catch (Throwable t) {
+            return ItemStack.EMPTY;
+        }
     }
 
     /**
@@ -69,7 +105,6 @@ public final class TravelersBackpackCompat {
         BlockPos foot = p.blockPosition();
         BlockPos head = foot.relative(facing);
 
-        // Need two clear cells with solid floor under the foot; otherwise don't disturb the world.
         if (!level.getBlockState(foot).canBeReplaced() || !level.getBlockState(head).canBeReplaced()) return null;
         if (!level.getBlockState(foot.below()).isFaceSturdy(level, foot.below(), Direction.UP)) return null;
 

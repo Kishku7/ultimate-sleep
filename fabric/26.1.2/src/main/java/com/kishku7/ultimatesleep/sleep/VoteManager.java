@@ -5,6 +5,7 @@ import com.kishku7.ultimatesleep.config.Settings;
 import com.kishku7.ultimatesleep.net.UltimateSleepNet;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
@@ -16,34 +17,42 @@ import java.util.UUID;
 /**
  * VOTE-mode sleep voting.
  *
- * Core principle: being in bed IS a YES. A player who is sleeping (including auto-sleep and a
- * Travelers' Backpack sleeping bag) is recorded as a YES automatically -- no command, and no client
- * mod required. The vote only exists to ask the players who are still AWAKE whether to skip without
- * them.
+ * Core principle: being in bed IS a YES. A sleeping player (incl. auto-sleep and a Travelers'
+ * Backpack sleeping bag) is recorded as a YES automatically -- no command, no client mod. The vote
+ * only exists to ask the players who are still AWAKE whether to skip without them.
  *
- * So:
- *  - When the first player sleeps, if EVERY eligible (non-spectator, non-AFK) player is already in
- *    bed, there is no one left to ask -> skip immediately, no vote UI (the "everyone's asleep"
- *    case, e.g. everyone auto-slept).
- *  - Otherwise a vote opens: sleepers are auto-YES, the awake eligible players get the popup (modded
- *    clients) and/or use /usleep yes|no. Getting into bed mid-vote is an auto-YES.
- *  - The vote finishes EARLY the moment every eligible player has decided (in bed or voted), instead
- *    of always waiting out vote_duration_seconds; otherwise it tallies when the window ends.
- *  - On a pass we ask the engine to skip (gamerule stays pinned at 101; the mod owns the skip).
+ *  - First sleeper, everyone eligible already in bed -> skip immediately, no vote UI.
+ *  - Otherwise a vote opens for the awake eligible players; sleepers are auto-YES; getting into bed
+ *    mid-vote is an auto-YES. The vote finishes EARLY once everyone eligible has decided.
+ *  - On PASS: ask the engine to skip (gamerule stays pinned at 101; the mod owns the skip).
+ *  - On FAIL: the night continues AND sleep is LOCKED until the next morning -- everyone in bed is
+ *    woken and no further sleep vote can start until daybreak. This stops the "vote fails -> a
+ *    still-sleeping player instantly restarts it" loop, and means a failed vote settles the night.
  */
 public final class VoteManager {
 
     private final Settings settings;
     private boolean active = false;
     private long startTick = 0;
+    private boolean lockedUntilDay = false;
     private final Map<UUID, Boolean> votes = new HashMap<>();
 
     public VoteManager(Settings settings) {
         this.settings = settings;
     }
 
+    public boolean isLockedUntilDay() {
+        return lockedUntilDay;
+    }
+
     public void tick(MinecraftServer server) {
         long now = server.getTickCount();
+
+        // A new day clears the failed-vote lockout.
+        ServerLevel ow = server.overworld();
+        if (lockedUntilDay && (ow == null || ow.isBrightOutside())) {
+            lockedUntilDay = false;
+        }
 
         if (!"VOTE".equals(settings.string("requirement_mode"))) {
             if (active) { active = false; votes.clear(); }
@@ -54,6 +63,16 @@ public final class VoteManager {
         List<ServerPlayer> sleepers = new ArrayList<>();
         for (ServerPlayer p : players) {
             if (!p.isSpectator() && p.isSleeping()) sleepers.add(p);
+        }
+
+        // Locked after a failed vote: no votes until morning; keep anyone out of bed.
+        if (lockedUntilDay) {
+            for (ServerPlayer s : sleepers) {
+                s.stopSleepInBed(false, true);
+                s.sendSystemMessage(Component.literal(
+                        "[Ultimate Sleep] Sleep is locked until morning -- a sleep vote failed tonight."));
+            }
+            return;
         }
 
         if (!active) {
@@ -133,6 +152,10 @@ public final class VoteManager {
             p.sendSystemMessage(Component.literal("[Ultimate Sleep] Vote mode is not enabled."));
             return;
         }
+        if (lockedUntilDay) {
+            p.sendSystemMessage(Component.literal("[Ultimate Sleep] Sleep is locked until morning -- a vote already failed tonight."));
+            return;
+        }
         if (!active) {
             p.sendSystemMessage(Component.literal("[Ultimate Sleep] No sleep vote is active."));
             return;
@@ -178,7 +201,12 @@ public final class VoteManager {
             broadcast(server, "Sleep vote passed -- skipping the night.");
             UltimateSleep.engine().requestSkip();
         } else {
-            broadcast(server, "Sleep vote failed -- the night continues.");
+            broadcast(server, "Sleep vote failed -- the night continues. No more sleep votes until morning.");
+            lockedUntilDay = true;
+            // Wake everyone so a still-sleeping player can't instantly restart the vote.
+            for (ServerPlayer p : players) {
+                if (p.isSleeping()) p.stopSleepInBed(false, true);
+            }
         }
         active = false;
         votes.clear();

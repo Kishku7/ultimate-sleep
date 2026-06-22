@@ -16,14 +16,20 @@ import java.util.UUID;
 /**
  * VOTE-mode sleep voting.
  *
- * When requirement_mode == VOTE, the first player to get into bed auto-starts a vote (and
- * auto-votes YES). Everyone non-AFK votes with /usleep yes | /usleep no (or the client popup)
- * during the vote_duration_seconds window; getting into bed mid-vote is an auto-YES. After the
- * window the result is tallied per vote_pass_rule. On PASS we ask the engine to skip the night
- * (engine.requestSkip()) -- ServerLevelSleepSkipMixin then lets vanilla advance time, wake
- * sleepers, and reset weather. The gamerule stays pinned at 101 (mod owns every skip). On FAIL
- * the night continues. While a vote runs, a live tally + sleeper list is pushed to the popups
- * once a second (show_sleepers_on_vote_screen).
+ * Core principle: being in bed IS a YES. A player who is sleeping (including auto-sleep and a
+ * Travelers' Backpack sleeping bag) is recorded as a YES automatically -- no command, and no client
+ * mod required. The vote only exists to ask the players who are still AWAKE whether to skip without
+ * them.
+ *
+ * So:
+ *  - When the first player sleeps, if EVERY eligible (non-spectator, non-AFK) player is already in
+ *    bed, there is no one left to ask -> skip immediately, no vote UI (the "everyone's asleep"
+ *    case, e.g. everyone auto-slept).
+ *  - Otherwise a vote opens: sleepers are auto-YES, the awake eligible players get the popup (modded
+ *    clients) and/or use /usleep yes|no. Getting into bed mid-vote is an auto-YES.
+ *  - The vote finishes EARLY the moment every eligible player has decided (in bed or voted), instead
+ *    of always waiting out vote_duration_seconds; otherwise it tallies when the window ends.
+ *  - On a pass we ask the engine to skip (gamerule stays pinned at 101; the mod owns the skip).
  */
 public final class VoteManager {
 
@@ -51,17 +57,24 @@ public final class VoteManager {
         }
 
         if (!active) {
-            if (!sleepers.isEmpty()) {
-                active = true;
-                startTick = now;
-                votes.clear();
-                for (ServerPlayer s : sleepers) votes.put(s.getUUID(), true); // auto-yes the starter(s)
-                broadcast(server, "A sleep vote has started! Use /usleep yes or /usleep no ("
-                        + settings.integer("vote_duration_seconds") + "s).");
-                for (ServerPlayer pl : players) {
-                    if (!pl.isSpectator() && !UltimateSleep.afk().isAfk(pl.getUUID()) && !votes.containsKey(pl.getUUID())) {
-                        UltimateSleepNet.sendVoteStart(pl, "Do you want to allow sleep without you?", settings.integer("vote_duration_seconds"));
-                    }
+            if (sleepers.isEmpty()) return;
+
+            // Unanimous shortcut: if no eligible player is still awake, just skip -- nobody to ask.
+            if (!anyEligibleAwake(players)) {
+                broadcast(server, "Everyone's asleep -- skipping the night.");
+                UltimateSleep.engine().requestSkip();
+                return;
+            }
+
+            active = true;
+            startTick = now;
+            votes.clear();
+            for (ServerPlayer s : sleepers) votes.put(s.getUUID(), true); // auto-yes the starter(s)
+            broadcast(server, "A sleep vote has started! Use /usleep yes or /usleep no ("
+                    + settings.integer("vote_duration_seconds") + "s).");
+            for (ServerPlayer pl : players) {
+                if (!pl.isSpectator() && !UltimateSleep.afk().isAfk(pl.getUUID()) && !votes.containsKey(pl.getUUID())) {
+                    UltimateSleepNet.sendVoteStart(pl, "Do you want to allow sleep without you?", settings.integer("vote_duration_seconds"));
                 }
             }
             return;
@@ -88,9 +101,31 @@ public final class VoteManager {
             }
         }
 
-        if (now - startTick >= (long) settings.integer("vote_duration_seconds") * 20L) {
+        // Finish early once everyone eligible has decided (in bed or voted), else at the window end.
+        boolean everyoneDecided = !anyEligibleUndecided(players);
+        if (everyoneDecided || now - startTick >= (long) settings.integer("vote_duration_seconds") * 20L) {
             finishVote(server, players);
         }
+    }
+
+    /** Any non-spectator, non-AFK player who is currently awake (still has a say). */
+    private boolean anyEligibleAwake(List<ServerPlayer> players) {
+        for (ServerPlayer p : players) {
+            if (p.isSpectator()) continue;
+            if (UltimateSleep.afk().isAfk(p.getUUID())) continue;
+            if (!p.isSleeping()) return true;
+        }
+        return false;
+    }
+
+    /** Any non-spectator, non-AFK player who has neither voted nor gone to bed. */
+    private boolean anyEligibleUndecided(List<ServerPlayer> players) {
+        for (ServerPlayer p : players) {
+            if (p.isSpectator()) continue;
+            if (UltimateSleep.afk().isAfk(p.getUUID())) continue;
+            if (!votes.containsKey(p.getUUID())) return true;
+        }
+        return false;
     }
 
     public void castVote(ServerPlayer p, boolean yes) {

@@ -2,7 +2,6 @@ package com.kishku7.ultimatesleep.sleep;
 
 import com.kishku7.ultimatesleep.UltimateSleep;
 import com.kishku7.ultimatesleep.config.Settings;
-import com.kishku7.ultimatesleep.net.UltimateSleepNet;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -10,8 +9,10 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -21,37 +22,41 @@ import java.util.UUID;
  * Backpack sleeping bag) is recorded as a YES automatically -- no command, no client mod. The vote
  * only exists to ask the players who are still AWAKE whether to skip without them.
  *
- *  - First sleeper, everyone eligible already in bed -> skip immediately, no vote UI.
- *  - Otherwise a vote opens for the awake eligible players; sleepers are auto-YES; getting into bed
- *    mid-vote is an auto-YES. The vote finishes EARLY once everyone eligible has decided.
- *  - On PASS: ask the engine to skip (gamerule stays pinned at 101; the mod owns the skip).
- *  - On FAIL: the night continues AND sleep is LOCKED until the next morning -- everyone in bed is
- *    woken and no further sleep vote can start until daybreak. This stops the "vote fails -> a
- *    still-sleeping player instantly restarts it" loop, and means a failed vote settles the night.
+ * The prompt is NON-BLOCKING: it is shown on the action bar (the line above the hotbar), pushed by
+ * the server, so it never grabs the cursor or freezes the game -- a player mid-fight can ignore it
+ * and vote with /usleep yes|no when it's safe. This works identically for vanilla (no-mod) clients.
+ *
+ *  - First sleeper, everyone eligible already in bed -> skip immediately, no vote.
+ *  - Otherwise a vote opens; sleepers are auto-YES; getting into bed mid-vote is an auto-YES; the
+ *    vote finishes EARLY once everyone eligible has decided, else at the window's end.
+ *  - On PASS: ask the engine to skip (gamerule pinned at 101; the mod owns the skip).
+ *  - On FAIL: the players who were in bed (the ones who wanted to sleep) are woken and LOCKED OUT
+ *    of sleep for the rest of the night, so they can't instantly restart the vote. Everyone else is
+ *    untouched and can still start a fresh vote. Locks clear at daybreak.
  */
 public final class VoteManager {
 
     private final Settings settings;
     private boolean active = false;
     private long startTick = 0;
-    private boolean lockedUntilDay = false;
     private final Map<UUID, Boolean> votes = new HashMap<>();
+    private final Set<UUID> lockedTonight = new HashSet<>();
 
     public VoteManager(Settings settings) {
         this.settings = settings;
     }
 
-    public boolean isLockedUntilDay() {
-        return lockedUntilDay;
+    public boolean isLocked(UUID player) {
+        return lockedTonight.contains(player);
     }
 
     public void tick(MinecraftServer server) {
         long now = server.getTickCount();
 
-        // A new day clears the failed-vote lockout.
+        // A new day clears all failed-vote lockouts.
         ServerLevel ow = server.overworld();
-        if (lockedUntilDay && (ow == null || ow.isBrightOutside())) {
-            lockedUntilDay = false;
+        if (!lockedTonight.isEmpty() && (ow == null || ow.isBrightOutside())) {
+            lockedTonight.clear();
         }
 
         if (!"VOTE".equals(settings.string("requirement_mode"))) {
@@ -62,17 +67,15 @@ public final class VoteManager {
         List<ServerPlayer> players = server.getPlayerList().getPlayers();
         List<ServerPlayer> sleepers = new ArrayList<>();
         for (ServerPlayer p : players) {
-            if (!p.isSpectator() && p.isSleeping()) sleepers.add(p);
-        }
-
-        // Locked after a failed vote: no votes until morning; keep anyone out of bed.
-        if (lockedUntilDay) {
-            for (ServerPlayer s : sleepers) {
-                s.stopSleepInBed(false, true);
-                s.sendSystemMessage(Component.literal(
-                        "[Ultimate Sleep] Sleep is locked until morning -- a sleep vote failed tonight."));
+            if (p.isSpectator() || !p.isSleeping()) continue;
+            if (lockedTonight.contains(p.getUUID())) {
+                // Locked this night after losing a vote: keep them out of bed, don't count them.
+                p.stopSleepInBed(false, true);
+                p.sendSystemMessage(Component.literal(
+                        "[Ultimate Sleep] You're locked out of sleep until morning -- your sleep vote failed."));
+                continue;
             }
-            return;
+            sleepers.add(p);
         }
 
         if (!active) {
@@ -89,35 +92,18 @@ public final class VoteManager {
             startTick = now;
             votes.clear();
             for (ServerPlayer s : sleepers) votes.put(s.getUUID(), true); // auto-yes the starter(s)
-            broadcast(server, "A sleep vote has started! Use /usleep yes or /usleep no ("
+            broadcast(server, "A sleep vote has started -- /usleep yes or /usleep no ("
                     + settings.integer("vote_duration_seconds") + "s).");
-            for (ServerPlayer pl : players) {
-                if (!pl.isSpectator() && !UltimateSleep.afk().isAfk(pl.getUUID()) && !votes.containsKey(pl.getUUID())) {
-                    UltimateSleepNet.sendVoteStart(pl, "Do you want to allow sleep without you?", settings.integer("vote_duration_seconds"));
-                }
-            }
+            sendPrompt(players, now);
             return;
         }
 
         // Active: getting into bed mid-vote is an auto-yes.
         for (ServerPlayer s : sleepers) votes.putIfAbsent(s.getUUID(), true);
 
-        // Live tally + sleeper list to the open popups, ~once a second.
-        if (settings.bool("show_sleepers_on_vote_screen") && (now - startTick) % 20 == 0) {
-            int yes = 0;
-            for (boolean v : votes.values()) if (v) yes++;
-            int no = votes.size() - yes;
-            StringBuilder sb = new StringBuilder();
-            for (ServerPlayer s : sleepers) {
-                if (sb.length() > 0) sb.append(", ");
-                sb.append(s.getName().getString());
-            }
-            String names = sb.toString();
-            for (ServerPlayer pl : players) {
-                if (!pl.isSpectator() && !UltimateSleep.afk().isAfk(pl.getUUID())) {
-                    UltimateSleepNet.sendVoteInfo(pl, yes, no, names);
-                }
-            }
+        // Refresh the non-blocking action-bar prompt about twice a second.
+        if ((now - startTick) % 10 == 0) {
+            sendPrompt(players, now);
         }
 
         // Finish early once everyone eligible has decided (in bed or voted), else at the window end.
@@ -127,21 +113,42 @@ public final class VoteManager {
         }
     }
 
-    /** Any non-spectator, non-AFK player who is currently awake (still has a say). */
+    /** Push the vote prompt to the action bar of every awake, eligible, still-undecided player. */
+    private void sendPrompt(List<ServerPlayer> players, long now) {
+        int yes = 0;
+        for (boolean v : votes.values()) if (v) yes++;
+        int no = votes.size() - yes;
+        int secsLeft = (int) Math.max(0,
+                (settings.integer("vote_duration_seconds") * 20L - (now - startTick) + 19) / 20);
+        String tally = settings.bool("show_sleepers_on_vote_screen") ? "  [Yes " + yes + " / No " + no + "]" : "";
+        Component msg = Component.literal("Sleep vote (" + secsLeft + "s): allow sleep without you?  "
+                + "/usleep yes | /usleep no" + tally);
+        for (ServerPlayer p : players) {
+            if (p.isSpectator() || p.isSleeping()) continue;
+            if (UltimateSleep.afk().isAfk(p.getUUID())) continue;
+            if (lockedTonight.contains(p.getUUID())) continue;
+            if (votes.containsKey(p.getUUID())) continue; // already voted
+            p.sendOverlayMessage(msg); // action bar (non-blocking)
+        }
+    }
+
+    /** Any non-spectator, non-AFK, non-locked player who is currently awake (still has a say). */
     private boolean anyEligibleAwake(List<ServerPlayer> players) {
         for (ServerPlayer p : players) {
             if (p.isSpectator()) continue;
             if (UltimateSleep.afk().isAfk(p.getUUID())) continue;
+            if (lockedTonight.contains(p.getUUID())) continue;
             if (!p.isSleeping()) return true;
         }
         return false;
     }
 
-    /** Any non-spectator, non-AFK player who has neither voted nor gone to bed. */
+    /** Any non-spectator, non-AFK, non-locked player who has neither voted nor gone to bed. */
     private boolean anyEligibleUndecided(List<ServerPlayer> players) {
         for (ServerPlayer p : players) {
             if (p.isSpectator()) continue;
             if (UltimateSleep.afk().isAfk(p.getUUID())) continue;
+            if (lockedTonight.contains(p.getUUID())) continue;
             if (!votes.containsKey(p.getUUID())) return true;
         }
         return false;
@@ -152,8 +159,8 @@ public final class VoteManager {
             p.sendSystemMessage(Component.literal("[Ultimate Sleep] Vote mode is not enabled."));
             return;
         }
-        if (lockedUntilDay) {
-            p.sendSystemMessage(Component.literal("[Ultimate Sleep] Sleep is locked until morning -- a vote already failed tonight."));
+        if (lockedTonight.contains(p.getUUID())) {
+            p.sendSystemMessage(Component.literal("[Ultimate Sleep] You're locked out of sleep votes until morning."));
             return;
         }
         if (!active) {
@@ -176,7 +183,9 @@ public final class VoteManager {
 
         int nonAfk = 0;
         for (ServerPlayer p : players) {
-            if (!p.isSpectator() && !UltimateSleep.afk().isAfk(p.getUUID())) nonAfk++;
+            if (!p.isSpectator() && !UltimateSleep.afk().isAfk(p.getUUID()) && !lockedTonight.contains(p.getUUID())) {
+                nonAfk++;
+            }
         }
 
         boolean pass = switch (settings.string("vote_pass_rule")) {
@@ -193,19 +202,21 @@ public final class VoteManager {
                         : "[Ultimate Sleep] You were outvoted."));
             }
         }
-        for (ServerPlayer pl : players) {
-            UltimateSleepNet.sendVoteEnd(pl);
-        }
 
         if (pass) {
             broadcast(server, "Sleep vote passed -- skipping the night.");
             UltimateSleep.engine().requestSkip();
         } else {
-            broadcast(server, "Sleep vote failed -- the night continues. No more sleep votes until morning.");
-            lockedUntilDay = true;
-            // Wake everyone so a still-sleeping player can't instantly restart the vote.
+            broadcast(server, "Sleep vote failed -- the night continues.");
+            // Lock out (and wake) the players who were in bed: they had their say and lost, so they
+            // can't restart the vote tonight. Everyone else can still start a fresh vote.
             for (ServerPlayer p : players) {
-                if (p.isSleeping()) p.stopSleepInBed(false, true);
+                if (p.isSleeping() && !p.isSpectator()) {
+                    lockedTonight.add(p.getUUID());
+                    p.stopSleepInBed(false, true);
+                    p.sendSystemMessage(Component.literal(
+                            "[Ultimate Sleep] You're locked out of sleep until morning."));
+                }
             }
         }
         active = false;

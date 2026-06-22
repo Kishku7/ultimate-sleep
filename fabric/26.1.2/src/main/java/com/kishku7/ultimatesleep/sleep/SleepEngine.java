@@ -31,9 +31,36 @@ public final class SleepEngine {
     private final Set<UUID> sleeping = new HashSet<>();
     private volatile boolean accelerating = false;
     private volatile boolean skipPending = false;
+    private volatile int accelMultiplier = 1;
 
     public SleepEngine(Settings settings) {
         this.settings = settings;
+    }
+
+    /** Game-ticks of time to advance per real tick while accelerating (computed per skip). */
+    public int accelMultiplier() {
+        return accelMultiplier;
+    }
+
+    /** Real seconds the night should take to pass for the named ACCELERATE speed. */
+    private static double speedSeconds(String speed) {
+        return switch (speed) {
+            case "SLOW" -> 10.0;
+            case "SLOWISH" -> 7.5;
+            case "FAST" -> 2.5;
+            default -> 5.0; // QUICK
+        };
+    }
+
+    /**
+     * Pace the time-lapse so the night finishes in the chosen real-time duration, from the moment
+     * sleep kicks in: advance (ticks remaining until morning) over (seconds * 20) real ticks.
+     */
+    private void computeAccelMultiplier(ServerLevel ow) {
+        long remaining = 24000L - (ow.getOverworldClockTime() % 24000L); // ticks to the morning reset
+        if (remaining < 1) remaining = 1;
+        int realTicks = Math.max(1, (int) Math.round(speedSeconds(settings.string("accelerate_speed")) * 20.0));
+        accelMultiplier = Math.max(1, (int) Math.round((double) remaining / realTicks));
     }
 
     public boolean isAccelerating() {
@@ -111,7 +138,8 @@ public final class SleepEngine {
                     }
                     accelerating = false;
                 }
-            } else if (sleepCount >= required && deep >= 1 && !day) {
+            } else if (sleepCount >= required && deep >= 1 && !day && ow != null) {
+                computeAccelMultiplier(ow);
                 accelerating = true;
             }
         } else {

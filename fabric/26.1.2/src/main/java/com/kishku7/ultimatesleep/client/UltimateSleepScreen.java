@@ -17,7 +17,7 @@ import java.util.Map;
  * The Ultimate Sleep admin panel: paginated (8 setting pages + a Sleep-Admin page), reading values
  * from {@link ClientState} (server-synced) and writing over the back-channel; the server validates
  * permissions and re-syncs. CD-themed via the 26.x render pipeline (dark panel + ThemedButtons +
- * dark, borderless edit fields painted by the screen).
+ * dark, center-aligned edit fields painted by the screen).
  */
 public final class UltimateSleepScreen extends Screen {
 
@@ -28,8 +28,8 @@ public final class UltimateSleepScreen extends Screen {
     private static final String[][] PAGE_KEYS = {
             {"enabled"},
             {"requirement_mode", "required_sleep_percentage", "exclude_afk_from_requirement",
-                    "skip_mode", "accelerate_multiplier", "preserve_weather"},
-            {"vote_duration_seconds", "vote_pass_rule", "vote_pass_percentage"},
+                    "skip_mode", "accelerate_speed", "preserve_weather"},
+            {"vote_duration_seconds", "vote_pass_percentage", "vote_pass_rule"},
             {"sleep_anytime", "sleep_ignore_monsters", "ignore_bed_too_far", "highlight_blocking_mobs"},
             {"show_sleepers_in_chat", "show_sleepers_on_vote_screen", "notify_wake"},
             {"reward_regeneration", "reward_regeneration_minutes", "reward_golden_carrot",
@@ -39,9 +39,13 @@ public final class UltimateSleepScreen extends Screen {
             {"auto_sleep_enabled", "afk_threshold_seconds", "provide_afk_command"},
             {}
     };
+    private static final int VOTING_PAGE = 2;
     private static final int ADMIN_PAGE = 8;
     private static final int MAX_ADMIN_ROWS = 5;
     private static final int PW = 260, PH = 204, ROW_TOP_OFF = 28, ROW_H = 22;
+
+    private static final String[] SPEED_VALUES = {"SLOW", "SLOWISH", "QUICK", "FAST"};
+    private static final String[] SPEED_LABELS = {"Slow", "Slowish", "Quick", "Fast"};
 
     private int page = 0;
     private int adminScroll = 0;
@@ -111,6 +115,9 @@ public final class UltimateSleepScreen extends Screen {
             for (int i = 0; i < keys.length; i++) {
                 buildSettingRow(keys[i], left + 8, ctrlX, rowTop + i * ROW_H, ctrlW);
             }
+            if (page == VOTING_PAGE) {
+                buildVotePassHelp(left, rowTop + keys.length * ROW_H + 4);
+            }
         }
 
         ThemedButton prev = new ThemedButton(left + 6, navY, 56, 20, Component.literal("< Prev"), () -> {
@@ -134,6 +141,10 @@ public final class UltimateSleepScreen extends Screen {
     }
 
     private void buildSettingRow(String key, int labelX, int ctrlX, int y, int ctrlW) {
+        if (key.equals("accelerate_speed")) {
+            buildSpeedButtons(y);
+            return;
+        }
         addRenderableWidget(new StringWidget(labelX, y + 4, ctrlX - labelX - 4, 12,
                 Component.literal(pretty(key)), this.font));
         String val = ClientState.values.getOrDefault(key, "");
@@ -156,10 +167,45 @@ public final class UltimateSleepScreen extends Screen {
             eb.setValue(val);
             eb.setEditable(ClientState.canSet);
             eb.setBordered(false);
+            eb.setCentered(true);
             eb.setTextColor(0xFFE6E6E6);
             pageEdits.put(key, eb);
             addRenderableWidget(eb);
         }
+    }
+
+    /** The four named ACCELERATE speeds as a row of buttons; active highlighted, all grey if OFF. */
+    private void buildSpeedButtons(int y) {
+        int left = left();
+        String cur = ClientState.values.getOrDefault("accelerate_speed", "QUICK");
+        boolean enabled = "ACCELERATE".equals(ClientState.values.get("skip_mode")) && ClientState.canSet;
+        int n = SPEED_VALUES.length, gap = 2, totalW = PW - 16;
+        int bw = (totalW - gap * (n - 1)) / n;
+        for (int i = 0; i < n; i++) {
+            final String v = SPEED_VALUES[i];
+            int bx = left + 8 + i * (bw + gap);
+            ThemedButton b = new ThemedButton(bx, y, bw, 20, Component.literal(SPEED_LABELS[i]),
+                    () -> send("accelerate_speed", v));
+            if (v.equals(cur)) {
+                b.colors(0xFF2E5E2E, 0xFF367036, 0xFF54FB54); // active: green
+            } else {
+                b.colors(0xFF6E6E6E, 0xFF7C7C7C, 0xFFCFCFCF); // inactive choice
+            }
+            b.active = enabled; // when skip_mode != ACCELERATE, ThemedButton renders all grey/disabled
+            addRenderableWidget(b);
+        }
+    }
+
+    /** Short descriptions of the three vote pass rules, under the Vote Pass Rule control. */
+    private void buildVotePassHelp(int left, int y) {
+        addRenderableWidget(new StringWidget(left + 8, y, PW - 16, 9,
+                Component.literal("Pass rule:"), this.font));
+        addRenderableWidget(new StringWidget(left + 8, y + 11, PW - 16, 9,
+                Component.literal("Majority Cast: more Yes than No"), this.font));
+        addRenderableWidget(new StringWidget(left + 8, y + 22, PW - 16, 9,
+                Component.literal("Percent Cast: Yes hits set % of votes"), this.font));
+        addRenderableWidget(new StringWidget(left + 8, y + 33, PW - 16, 9,
+                Component.literal("Non-AFK: Yes beats half of awake players"), this.font));
     }
 
     private void buildAdminPage(int left, int rowTop, int ctrlW) {
@@ -188,6 +234,7 @@ public final class UltimateSleepScreen extends Screen {
         addAdminField.setHint(Component.literal("player name"));
         addAdminField.setEditable(ClientState.canAdmin);
         addAdminField.setBordered(false);
+        addAdminField.setCentered(true);
         addAdminField.setTextColor(0xFFE6E6E6);
         addRenderableWidget(addAdminField);
         ThemedButton add = new ThemedButton(left + PW - 8 - 50, addY, 50, 20, Component.literal("Add"), () -> {

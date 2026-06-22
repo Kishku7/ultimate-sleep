@@ -26,7 +26,7 @@ public abstract class ServerLevelTimeMixin {
         if (!UltimateSleep.engine().isAccelerating()) return;
         ServerLevel self = (ServerLevel) (Object) this;
         if (self.getServer() == null || self != self.getServer().overworld()) return;
-        int extra = Math.max(1, UltimateSleep.settings().integer("accelerate_multiplier")) - 1;
+        int extra = Math.max(1, UltimateSleep.engine().accelMultiplier()) - 1;
         for (int i = 0; i < extra; i++) {
             this.tickTime();
         }

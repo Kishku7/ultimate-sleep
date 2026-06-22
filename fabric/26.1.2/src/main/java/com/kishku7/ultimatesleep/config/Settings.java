@@ -64,7 +64,8 @@ public final class Settings {
                 List.of("MAJORITY_CAST", "PERCENT_CAST", "MAJORITY_NON_AFK"));
         reg("vote_pass_percentage", Type.PERCENT, 50, "Percent of votes cast to pass (PERCENT_CAST).");
         regEnum("skip_mode", "INSTANT", "How the triggered skip is carried out.", List.of("INSTANT", "ACCELERATE"));
-        reg("accelerate_multiplier", Type.INT, 60, "Sim ticks per real tick (ACCELERATE).");
+        regEnum("accelerate_speed", "QUICK", "How fast the night passes (ACCELERATE).",
+                List.of("SLOW", "SLOWISH", "QUICK", "FAST"));
         reg("preserve_weather", Type.BOOL, false, "Keep rain/storms across a skip.");
         // accessibility
         reg("sleep_anytime", Type.BOOL, false, "Allow sleeping during the day.");

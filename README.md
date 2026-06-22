@@ -41,8 +41,8 @@ The core. One setting, `requirement_mode`, picks how a night gets skipped.
 ### Skip behavior (how the triggered skip is carried out)
 
 - **[Have] INSTANT.** Jump straight to morning (vanilla-style).
-- **[Have] ACCELERATE.** Time-lapse the night instead of jumping, at `accelerate_multiplier`
-  speed.
+- **[Have] ACCELERATE.** Time-lapse the night instead of jumping, at one of four named speeds (Slow/Slowish/Quick/Fast = ~10/7.5/5/2.5 real seconds)
+  .
 - **[Have] Preserve weather.** Optionally keep rain/storms running across the skip instead of
   clearing them.
 
@@ -164,7 +164,7 @@ accessibility. Persisted to JSON.
 | vote_pass_rule | MAJORITY_CAST \| PERCENT_CAST \| MAJORITY_NON_AFK | MAJORITY_NON_AFK |
 | vote_pass_percentage | int | 50 |
 | skip_mode | INSTANT \| ACCELERATE | INSTANT |
-| accelerate_multiplier | int | 60 |
+| accelerate_speed | SLOW \| SLOWISH \| QUICK \| FAST | QUICK |
 | preserve_weather | bool | false |
 | sleep_anytime | bool | false |
 | sleep_ignore_monsters | bool | false |

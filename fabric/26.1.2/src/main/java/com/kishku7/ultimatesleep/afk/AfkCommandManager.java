@@ -62,7 +62,12 @@ public final class AfkCommandManager {
             UltimateSleep.LOGGER.info("[UltimateSleep] provide_afk_command is off; not registering /afk.");
             return;
         }
-        dispatcher.register(Commands.literal("afk").redirect(usleepAfkNode));
+        // Reuse the /usleep afk command directly (a Brigadier redirect only fires when there is
+        // trailing input, so bare "/afk" with a redirect would fail as unknown/incomplete).
+        com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> afkAlias = Commands.literal("afk");
+        com.mojang.brigadier.Command<CommandSourceStack> afkCmd = usleepAfkNode.getCommand();
+        if (afkCmd != null) afkAlias.executes(afkCmd);
+        dispatcher.register(afkAlias);
         owner = Owner.ULTIMATE_SLEEP;
         ownerModId = "ultimate_sleep";
         UltimateSleep.LOGGER.info("[UltimateSleep] registered /afk as an alias to /usleep afk (no other provider found).");

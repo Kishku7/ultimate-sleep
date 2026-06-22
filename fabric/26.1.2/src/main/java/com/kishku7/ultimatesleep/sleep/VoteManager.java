@@ -115,14 +115,9 @@ public final class VoteManager {
 
     /** Push the vote prompt to the action bar of every awake, eligible, still-undecided player. */
     private void sendPrompt(List<ServerPlayer> players, long now) {
-        int yes = 0;
-        for (boolean v : votes.values()) if (v) yes++;
-        int no = votes.size() - yes;
         int secsLeft = (int) Math.max(0,
                 (settings.integer("vote_duration_seconds") * 20L - (now - startTick) + 19) / 20);
-        String tally = settings.bool("show_sleepers_on_vote_screen") ? "  [Yes " + yes + " / No " + no + "]" : "";
-        Component msg = Component.literal("Sleep vote (" + secsLeft + "s): allow sleep without you?  "
-                + "/usleep yes | /usleep no" + tally);
+        Component msg = Component.literal("Sleep vote (" + secsLeft + "s): /usleep yes  or  /usleep no");
         for (ServerPlayer p : players) {
             if (p.isSpectator() || p.isSleeping()) continue;
             if (UltimateSleep.afk().isAfk(p.getUUID())) continue;

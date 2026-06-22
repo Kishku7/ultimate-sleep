@@ -64,6 +64,9 @@ public final class VoteManager {
             return;
         }
 
+        // A pass may be time-lapsing the night (ACCELERATE); don't open a new vote meanwhile.
+        if (UltimateSleep.engine().isAccelerating()) return;
+
         List<ServerPlayer> players = server.getPlayerList().getPlayers();
         List<ServerPlayer> sleepers = new ArrayList<>();
         for (ServerPlayer p : players) {
@@ -84,7 +87,7 @@ public final class VoteManager {
             // Unanimous shortcut: if no eligible player is still awake, just skip -- nobody to ask.
             if (!anyEligibleAwake(players)) {
                 broadcast(server, "Everyone's asleep -- skipping the night.");
-                UltimateSleep.engine().requestSkip();
+                UltimateSleep.engine().performSkip(server);
                 return;
             }
 
@@ -200,7 +203,7 @@ public final class VoteManager {
 
         if (pass) {
             broadcast(server, "Sleep vote passed -- skipping the night.");
-            UltimateSleep.engine().requestSkip();
+            UltimateSleep.engine().performSkip(server);
         } else {
             broadcast(server, "Sleep vote failed -- the night continues.");
             // Lock out (and wake) the players who were in bed: they had their say and lost, so they

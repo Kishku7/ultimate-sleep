@@ -14,17 +14,21 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * SIMPLE-mode night-skip engine + sleeper messaging, with AFK exclusion and two skip modes.
+ * Night-skip engine: decides WHEN to skip (SIMPLE percentage path) and performs HOW every skip is
+ * carried out (INSTANT or ACCELERATE), for both SIMPLE and VOTE requirement modes.
  *
- * Policy (Dave, 2026-06-21): the playersSleepingPercentage gamerule is pinned to 101 so vanilla
- * never skips on its own; the mod owns every skip. INSTANT jumps to morning via requestSkip().
+ * The playersSleepingPercentage gamerule is pinned to 100 (the valid max -- 101 is rejected by the
+ * gamerule command); vanilla still never self-skips because ServerLevelSleepSkipMixin redirects the
+ * overworld sleep check to our skipPending flag. So the gamerule value is cosmetic; the mixin is
+ * what guarantees the mod owns every skip.
  *
- * ACCELERATE time-lapses the night. In 26.x the day-night cycle is driven by the ServerClockManager
- * (NOT ServerLevel.tickTime(), which only advances gameTime), so we accelerate by setting the
- * overworld clock's RATE: each server tick the clock advances by `rate` instead of 1. We choose the
- * rate so the night finishes in the chosen wall-clock time (Slow/Slowish/Quick/Fast = 10/7.5/5/2.5s)
- * from the moment sleep kicks in -- rate = (ticks remaining to morning) / (seconds * 20). When the
- * morning arrives we restore rate 1.0 and wake the sleepers. Start/end are logged for tuning.
+ * performSkip() is the single entry point used by SIMPLE (here) and VOTE (VoteManager):
+ *   - INSTANT  -> requestSkip(): the mixin lets vanilla jump to morning (+wake +weather).
+ *   - ACCELERATE -> set the overworld clock RATE so the night time-lapses to dawn in the chosen
+ *     wall-clock seconds (Slow/Slowish/Quick/Fast = 10/7.5/5/2.5s), then restore rate 1.0 and wake.
+ * In 26.x the day-night cycle is driven by ServerClockManager (NOT tickTime, which only moves
+ * gameTime), so the clock RATE is the correct lever. The acceleration loop runs every tick in any
+ * mode; start/end are logged for tuning.
  */
 public final class SleepEngine {
 
@@ -54,6 +58,17 @@ public final class SleepEngine {
 
     public void consumeSkip() {
         this.skipPending = false;
+    }
+
+    /** Carry out a skip per skip_mode. Safe to call repeatedly; no-op while already accelerating. */
+    public void performSkip(MinecraftServer server) {
+        if (accelerating) return;
+        ServerLevel ow = server.overworld();
+        if ("ACCELERATE".equals(settings.string("skip_mode")) && ow != null) {
+            startAccelerate(server, ow);
+        } else {
+            requestSkip();
+        }
     }
 
     /** Real seconds the night should take to pass for the named ACCELERATE speed. */
@@ -95,25 +110,39 @@ public final class SleepEngine {
         accelRate = 1.0f;
     }
 
+    /** While accelerating, stop and wake everyone once dawn arrives. Runs every tick, any mode. */
+    private void manageAcceleration(MinecraftServer server) {
+        if (!accelerating) return;
+        ServerLevel ow = server.overworld();
+        boolean day = ow == null || ow.isBrightOutside();
+        if (day) {
+            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                if (p.isSleeping()) p.stopSleepInBed(false, true);
+            }
+            stopAccelerate(server);
+        }
+    }
+
     /**
-     * Pin the gamerule to 101 so vanilla can NEVER self-trigger -- sleepersNeeded always rounds to
-     * (activePlayers + 1), which is unreachable, so even if every player piles into bed the vanilla
-     * skip stays dormant. The mod owns every skip (via the skip mixin's pending flag).
+     * No-op now: we do NOT touch the playersSleepingPercentage gamerule. The vanilla command
+     * `gamerule playersSleepingPercentage <n>` is rejected in 26.x (Incorrect argument), and it's
+     * unnecessary anyway -- ServerLevelSleepSkipMixin overrides the overworld sleep check, so
+     * vanilla never self-skips regardless of the gamerule value. Kept for existing callers.
      */
     public void applyConfig(MinecraftServer server) {
-        if (server == null) return;
-        setGamerule(server, 101);
+        // intentionally empty
     }
 
     public void tick(MinecraftServer server) {
+        manageAcceleration(server);
+        if (accelerating) return; // night is time-lapsing; don't evaluate new triggers
+
         if (!settings.bool("enabled") || !"SIMPLE".equals(settings.string("requirement_mode"))) {
             if (!sleeping.isEmpty()) sleeping.clear();
-            if (accelerating) stopAccelerate(server);
             return;
         }
 
         boolean excludeAfk = settings.bool("exclude_afk_from_requirement");
-        boolean accelerate = "ACCELERATE".equals(settings.string("skip_mode"));
         int pct = clamp(settings.integer("required_sleep_percentage"), 0, 100);
 
         int eligible = 0, sleepCount = 0, deep = 0;
@@ -143,34 +172,12 @@ public final class SleepEngine {
             }
         }
 
-        if (accelerate) {
-            ServerLevel ow = server.overworld();
-            boolean day = ow != null && ow.isBrightOutside();
-            if (accelerating) {
-                if (day || sleepCount == 0) {
-                    for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                        if (p.isSleeping()) p.stopSleepInBed(false, true);
-                    }
-                    stopAccelerate(server);
-                }
-            } else if (sleepCount >= required && deep >= 1 && !day && ow != null) {
-                startAccelerate(server, ow);
-            }
-        } else {
-            if (accelerating) stopAccelerate(server);
-            // INSTANT: the mod drives the skip the moment the configured share is deep-asleep.
-            if (sleepCount >= required && deep >= 1) {
-                requestSkip();
-            }
+        if (sleepCount >= required && deep >= 1) {
+            performSkip(server); // respects skip_mode (INSTANT or ACCELERATE)
         }
 
         sleeping.clear();
         sleeping.addAll(current);
-    }
-
-    private void setGamerule(MinecraftServer server, int v) {
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack(), "gamerule playersSleepingPercentage " + v);
     }
 
     private static int clamp(int v, int lo, int hi) {

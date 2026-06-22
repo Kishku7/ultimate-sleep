@@ -7,7 +7,6 @@
     "ServerPlayerSleepMixin",
     "ServerLevelSleepSkipMixin",
     "ServerLevelWeatherMixin",
-    "ServerLevelTimeMixin",
     "ServerLevelProgressionMixin",
     "FurnaceProgressionMixin",
     "AgeableMobProgressionMixin",

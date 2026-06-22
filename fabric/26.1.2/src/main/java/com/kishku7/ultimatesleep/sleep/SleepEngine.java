@@ -16,14 +16,15 @@ import java.util.UUID;
 /**
  * SIMPLE-mode night-skip engine + sleeper messaging, with AFK exclusion and two skip modes.
  *
- * Policy (Dave, 2026-06-21): the vanilla playersSleepingPercentage gamerule is PINNED to 101 and
- * left there. With 101, sleepersNeeded always rounds up to (activePlayers + 1) -- unreachable --
- * so vanilla never skips the night by itself even if every player piles into bed. The ONLY trigger
- * is this mod. INSTANT skips are driven through {@link #requestSkip()}: when the configured share
- * of eligible players is deep-asleep we raise the pending flag, and ServerLevelSleepSkipMixin lets
- * vanilla's own skip block run (clock advance + wake + weather) for that one tick. ACCELERATE mode
- * instead time-lapses the night via ServerLevelTimeMixin and never requests a skip. VOTE mode is
- * handled by VoteManager, which also calls requestSkip() on a passing vote.
+ * Policy (Dave, 2026-06-21): the playersSleepingPercentage gamerule is pinned to 101 so vanilla
+ * never skips on its own; the mod owns every skip. INSTANT jumps to morning via requestSkip().
+ *
+ * ACCELERATE time-lapses the night. In 26.x the day-night cycle is driven by the ServerClockManager
+ * (NOT ServerLevel.tickTime(), which only advances gameTime), so we accelerate by setting the
+ * overworld clock's RATE: each server tick the clock advances by `rate` instead of 1. We choose the
+ * rate so the night finishes in the chosen wall-clock time (Slow/Slowish/Quick/Fast = 10/7.5/5/2.5s)
+ * from the moment sleep kicks in -- rate = (ticks remaining to morning) / (seconds * 20). When the
+ * morning arrives we restore rate 1.0 and wake the sleepers. Start/end are logged for tuning.
  */
 public final class SleepEngine {
 
@@ -31,36 +32,11 @@ public final class SleepEngine {
     private final Set<UUID> sleeping = new HashSet<>();
     private volatile boolean accelerating = false;
     private volatile boolean skipPending = false;
-    private volatile int accelMultiplier = 1;
+    private volatile float accelRate = 1.0f;
+    private long accelStartTick = 0;
 
     public SleepEngine(Settings settings) {
         this.settings = settings;
-    }
-
-    /** Game-ticks of time to advance per real tick while accelerating (computed per skip). */
-    public int accelMultiplier() {
-        return accelMultiplier;
-    }
-
-    /** Real seconds the night should take to pass for the named ACCELERATE speed. */
-    private static double speedSeconds(String speed) {
-        return switch (speed) {
-            case "SLOW" -> 10.0;
-            case "SLOWISH" -> 7.5;
-            case "FAST" -> 2.5;
-            default -> 5.0; // QUICK
-        };
-    }
-
-    /**
-     * Pace the time-lapse so the night finishes in the chosen real-time duration, from the moment
-     * sleep kicks in: advance (ticks remaining until morning) over (seconds * 20) real ticks.
-     */
-    private void computeAccelMultiplier(ServerLevel ow) {
-        long remaining = 24000L - (ow.getOverworldClockTime() % 24000L); // ticks to the morning reset
-        if (remaining < 1) remaining = 1;
-        int realTicks = Math.max(1, (int) Math.round(speedSeconds(settings.string("accelerate_speed")) * 20.0));
-        accelMultiplier = Math.max(1, (int) Math.round((double) remaining / realTicks));
     }
 
     public boolean isAccelerating() {
@@ -80,6 +56,45 @@ public final class SleepEngine {
         this.skipPending = false;
     }
 
+    /** Real seconds the night should take to pass for the named ACCELERATE speed. */
+    private static double speedSeconds(String speed) {
+        return switch (speed) {
+            case "SLOW" -> 10.0;
+            case "SLOWISH" -> 7.5;
+            case "FAST" -> 2.5;
+            default -> 5.0; // QUICK
+        };
+    }
+
+    private void setClockRate(MinecraftServer server, ServerLevel ow, float rate) {
+        ow.dimensionType().defaultClock().ifPresent(clock -> server.clockManager().setRate(clock, rate));
+    }
+
+    private void startAccelerate(MinecraftServer server, ServerLevel ow) {
+        long remaining = 24000L - (ow.getOverworldClockTime() % 24000L); // day-ticks to morning
+        if (remaining < 1) remaining = 1;
+        double secs = speedSeconds(settings.string("accelerate_speed"));
+        accelRate = (float) Math.max(1.0, remaining / (secs * 20.0));
+        accelStartTick = server.getTickCount();
+        setClockRate(server, ow, accelRate);
+        accelerating = true;
+        UltimateSleep.LOGGER.info(String.format(
+                "[UltimateSleep] ACCELERATE start: speed=%s target=%.1fs remaining=%d ticks -> clock rate=%.2f/tick (expect ~%.1fs)",
+                settings.string("accelerate_speed"), secs, remaining, accelRate, secs));
+    }
+
+    private void stopAccelerate(MinecraftServer server) {
+        if (!accelerating) return;
+        ServerLevel ow = server.overworld();
+        if (ow != null) setClockRate(server, ow, 1.0f);
+        long elapsed = server.getTickCount() - accelStartTick;
+        UltimateSleep.LOGGER.info(String.format(
+                "[UltimateSleep] ACCELERATE end: speed=%s elapsed=%d ticks (%.2fs) at rate=%.2f",
+                settings.string("accelerate_speed"), elapsed, elapsed / 20.0, accelRate));
+        accelerating = false;
+        accelRate = 1.0f;
+    }
+
     /**
      * Pin the gamerule to 101 so vanilla can NEVER self-trigger -- sleepersNeeded always rounds to
      * (activePlayers + 1), which is unreachable, so even if every player piles into bed the vanilla
@@ -93,7 +108,7 @@ public final class SleepEngine {
     public void tick(MinecraftServer server) {
         if (!settings.bool("enabled") || !"SIMPLE".equals(settings.string("requirement_mode"))) {
             if (!sleeping.isEmpty()) sleeping.clear();
-            accelerating = false;
+            if (accelerating) stopAccelerate(server);
             return;
         }
 
@@ -136,14 +151,13 @@ public final class SleepEngine {
                     for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                         if (p.isSleeping()) p.stopSleepInBed(false, true);
                     }
-                    accelerating = false;
+                    stopAccelerate(server);
                 }
             } else if (sleepCount >= required && deep >= 1 && !day && ow != null) {
-                computeAccelMultiplier(ow);
-                accelerating = true;
+                startAccelerate(server, ow);
             }
         } else {
-            accelerating = false;
+            if (accelerating) stopAccelerate(server);
             // INSTANT: the mod drives the skip the moment the configured share is deep-asleep.
             if (sleepCount >= required && deep >= 1) {
                 requestSkip();

@@ -66,9 +66,6 @@ public final class UltimateSleepScreen extends Screen {
         g.fill(left - 1, top - 1, left + PW + 1, top + PH + 1, 0xFF2F2F2F);
         g.fill(left, top, left + PW, top + PH, 0xFF121212);
         g.fill(left, top, left + PW, top + 22, 0xFF1C1C1C);
-        // dark backing for each (borderless) edit field
-        for (EditBox eb : pageEdits.values()) paintField(g, eb);
-        if (page == ADMIN_PAGE && addAdminField != null) paintField(g, addAdminField);
         // admin-list scrollbar
         if (page == ADMIN_PAGE) {
             int n = ClientState.admins.size();
@@ -166,7 +163,6 @@ public final class UltimateSleepScreen extends Screen {
             eb.setMaxLength(32);
             eb.setValue(val);
             eb.setEditable(ClientState.canSet);
-            eb.setBordered(false);
             eb.setCentered(true);
             eb.setTextColor(0xFFE6E6E6);
             pageEdits.put(key, eb);
@@ -233,7 +229,6 @@ public final class UltimateSleepScreen extends Screen {
         addAdminField.setMaxLength(16);
         addAdminField.setHint(Component.literal("player name"));
         addAdminField.setEditable(ClientState.canAdmin);
-        addAdminField.setBordered(false);
         addAdminField.setCentered(true);
         addAdminField.setTextColor(0xFFE6E6E6);
         addRenderableWidget(addAdminField);

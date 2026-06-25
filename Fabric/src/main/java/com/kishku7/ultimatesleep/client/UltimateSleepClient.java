@@ -22,12 +22,12 @@ public final class UltimateSleepClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(UsleepSyncPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     ClientState.update(payload.json());
-                    if (Minecraft.getInstance().screen instanceof UltimateSleepScreen s) {
+                    if (ScreenCompat.currentScreen() instanceof UltimateSleepScreen s) {
                         s.refresh();
                     }
                 }));
 
         ClientPlayNetworking.registerGlobalReceiver(UsleepOpenPayload.TYPE, (payload, context) ->
-                context.client().execute(() -> Minecraft.getInstance().setScreen(new UltimateSleepScreen())));
+                context.client().execute(() -> ScreenCompat.setScreen(new UltimateSleepScreen())));
     }
 }

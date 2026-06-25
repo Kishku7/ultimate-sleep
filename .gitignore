@@ -1,5 +1,6 @@
-fabric/**/.gradle/
-fabric/**/build/
-fabric/**/run/
-*.class
-.DS_Store
+.gradle/
+build/
+out/
+run/
+*.log
+dist/

@@ -6,9 +6,9 @@ single mod where everything is a toggle. In singleplayer the player is the admin
 controls are permission-gated. The mod is required on the **server only** -- it works for vanilla
 clients via chat/commands, and adds an optional in-game panel for clients that also have it.
 
-- **Loader:** Fabric only (until 1.0; other loaders + backports considered afterward).
-- **Minecraft:** built against 26.1.2, declared compatible with `26.1.x` and `26.2.x`
-  (`fabric.mod.json` minecraft range `>=26.1 <26.3`). A dedicated NeoForge build is post-1.0.
+- **Loader:** Fabric (a NeoForge build is in progress; the per-loader surface is already isolated).
+- **Minecraft:** built + shipped for **26.1.2, 26.2, and 26.3-snapshot-1** from one unified `26`
+  source (shared_minecraft + per-loader). On Modrinth as **beta**.
 - **Author:** Kishku7 · **License:** ARR · single source of truth for design: `FUNCTIONAL_SPEC.md`.
 
 Status legend: **[Have]** working today · **[Partial]** partly working / refinement pending ·

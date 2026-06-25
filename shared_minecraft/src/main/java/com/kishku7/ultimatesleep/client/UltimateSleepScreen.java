@@ -1,8 +1,9 @@
 package com.kishku7.ultimatesleep.client;
 
+import com.kishku7.ultimatesleep.net.ClientNet;
+
 import com.kishku7.ultimatesleep.net.UsleepRosterPayload;
 import com.kishku7.ultimatesleep.net.UsleepSetPayload;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
@@ -250,11 +251,11 @@ public final class UltimateSleepScreen extends Screen {
     }
 
     private void send(String key, String value) {
-        ClientPlayNetworking.send(new UsleepSetPayload(key, value));
+        ClientNet.sendToServer(new UsleepSetPayload(key, value));
     }
 
     private void roster(String action, String name) {
-        ClientPlayNetworking.send(new UsleepRosterPayload(action, name));
+        ClientNet.sendToServer(new UsleepRosterPayload(action, name));
     }
 
     private static String nextEnum(String key) {

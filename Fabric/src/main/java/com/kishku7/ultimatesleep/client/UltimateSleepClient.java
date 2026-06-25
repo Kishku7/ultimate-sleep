@@ -19,6 +19,7 @@ public final class UltimateSleepClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        com.kishku7.ultimatesleep.net.ClientNet.SENDER = ClientPlayNetworking::send;
         ClientPlayNetworking.registerGlobalReceiver(UsleepSyncPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     ClientState.update(payload.json());

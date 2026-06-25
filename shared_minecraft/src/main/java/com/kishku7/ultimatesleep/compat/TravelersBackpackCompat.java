@@ -1,6 +1,7 @@
 package com.kishku7.ultimatesleep.compat;
 
-import net.fabricmc.loader.api.FabricLoader;
+import com.kishku7.ultimatesleep.Platform;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.TypedDataComponent;
@@ -41,7 +42,7 @@ public final class TravelersBackpackCompat {
             Identifier.fromNamespaceAndPath(MOD_ID, "red_sleeping_bag");
 
     public static boolean isPresent() {
-        return FabricLoader.getInstance().isModLoaded(MOD_ID);
+        return Platform.isModLoaded(MOD_ID);
     }
 
     /** True if the player can use a sleeping bag: a loose bag item, or one attached to their backpack. */

@@ -1,10 +1,11 @@
 package com.kishku7.ultimatesleep.config;
 
+import com.kishku7.ultimatesleep.Platform;
+
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.kishku7.ultimatesleep.UltimateSleep;
-import net.fabricmc.loader.api.FabricLoader;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,7 +50,7 @@ public final class Settings {
     }
 
     private final Map<String, Entry> entries = new LinkedHashMap<>();
-    private final Path file = FabricLoader.getInstance().getConfigDir().resolve("ultimate_sleep.json");
+    private final Path file = Platform.configDir().resolve("ultimate_sleep.json");
     private static final com.google.gson.Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     public Settings() {

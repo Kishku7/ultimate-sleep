@@ -1,11 +1,12 @@
 package com.kishku7.ultimatesleep.sleep;
 
+import com.kishku7.ultimatesleep.Platform;
+
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.kishku7.ultimatesleep.UltimateSleep;
 import com.kishku7.ultimatesleep.compat.TravelersBackpackCompat;
 import com.kishku7.ultimatesleep.config.Settings;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
@@ -41,7 +42,7 @@ public final class AutoSleepManager {
     private final Settings settings;
     private final Set<String> optedIn = new LinkedHashSet<>();
     private final Map<UUID, BlockPos[]> placedBags = new HashMap<>();
-    private final Path file = FabricLoader.getInstance().getConfigDir().resolve("ultimate_sleep_autosleep.json");
+    private final Path file = Platform.configDir().resolve("ultimate_sleep_autosleep.json");
     private static final com.google.gson.Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private boolean wasBright = true;
 

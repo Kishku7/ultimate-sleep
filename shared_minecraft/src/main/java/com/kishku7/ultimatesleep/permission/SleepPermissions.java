@@ -1,9 +1,10 @@
 package com.kishku7.ultimatesleep.permission;
 
+import com.kishku7.ultimatesleep.Platform;
+
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.kishku7.ultimatesleep.UltimateSleep;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
@@ -31,7 +32,7 @@ import java.util.Set;
 public final class SleepPermissions {
 
     private final Set<String> sleepAdmins = new LinkedHashSet<>();
-    private final Path file = FabricLoader.getInstance().getConfigDir().resolve("ultimate_sleep_admins.json");
+    private final Path file = Platform.configDir().resolve("ultimate_sleep_admins.json");
     private static final com.google.gson.Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     public boolean isSleepAdmin(CommandSourceStack src) {

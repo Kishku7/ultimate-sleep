@@ -98,6 +98,10 @@ cost.
   clients with no UI.
 - **Non-blocking vote prompt** -- a bottom-of-screen action-bar message (never a blocking screen,
   so gameplay is never frozen) plus a private "your vote carried / you were outvoted" result.
+- **Live vote tally** (`show_sleepers_on_vote_screen`) -- the vote prompt can also show the running
+  yes/no count and who is currently in bed.
+- **Wake announcement** (`notify_wake`) -- a short broadcast once the night has been skipped, so
+  everyone knows morning has arrived.
 
 ### In-game admin panel (optional client UI)
 
@@ -137,6 +141,8 @@ opt-in, home bed) is runtime player data, not in this global table.
 | ignore_bed_too_far | bool | false |
 | highlight_blocking_mobs | bool | false |
 | show_sleepers_in_chat | bool | true |
+| show_sleepers_on_vote_screen | bool | true |
+| notify_wake | bool | true |
 | reward_regeneration | bool | false |
 | reward_regeneration_minutes | int | 5 |
 | reward_golden_carrot | bool | false |

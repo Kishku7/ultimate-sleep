@@ -29,7 +29,7 @@ import java.util.UUID;
  *  - First sleeper, everyone eligible already in bed -> skip immediately, no vote.
  *  - Otherwise a vote opens; sleepers are auto-YES; getting into bed mid-vote is an auto-YES; the
  *    vote finishes EARLY once everyone eligible has decided, else at the window's end.
- *  - On PASS: ask the engine to skip (gamerule pinned at 101; the mod owns the skip).
+ *  - On PASS: ask the engine to skip (the mod owns every skip via the sleep mixin).
  *  - On FAIL: the players who were in bed (the ones who wanted to sleep) are woken and LOCKED OUT
  *    of sleep for the rest of the night, so they can't instantly restart the vote. Everyone else is
  *    untouched and can still start a fresh vote. Locks clear at daybreak.
@@ -120,7 +120,24 @@ public final class VoteManager {
     private void sendPrompt(List<ServerPlayer> players, long now) {
         int secsLeft = (int) Math.max(0,
                 (settings.integer("vote_duration_seconds") * 20L - (now - startTick) + 19) / 20);
-        Component msg = Component.literal("Sleep vote (" + secsLeft + "s): /usleep yes  or  /usleep no");
+        String text = "Sleep vote (" + secsLeft + "s): /usleep yes  or  /usleep no";
+        // Optional live tally + who's currently in bed, appended to the action-bar prompt. The old
+        // blocking vote screen was removed (votes are non-blocking action-bar), so this setting now
+        // enriches the prompt itself rather than a popup.
+        if (settings.bool("show_sleepers_on_vote_screen")) {
+            int yes = 0, no = 0;
+            for (boolean v : votes.values()) { if (v) yes++; else no++; }
+            StringBuilder beds = new StringBuilder();
+            for (ServerPlayer p : players) {
+                if (p.isSleeping() && !p.isSpectator()) {
+                    if (beds.length() > 0) beds.append(", ");
+                    beds.append(p.getName().getString());
+                }
+            }
+            text += "  [Yes " + yes + " / No " + no
+                    + (beds.length() > 0 ? "; in bed: " + beds : "") + "]";
+        }
+        Component msg = Component.literal(text);
         for (ServerPlayer p : players) {
             if (p.isSpectator() || p.isSleeping()) continue;
             if (UltimateSleep.afk().isAfk(p.getUUID())) continue;

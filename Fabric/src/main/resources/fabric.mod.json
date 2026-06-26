@@ -7,9 +7,6 @@
   "authors": [
     "Kishku7"
   ],
-  "contact": {
-    "sources": "https://github.com/Kishku7/ultimate-sleep"
-  },
   "license": "ARR",
   "environment": "*",
   "entrypoints": {

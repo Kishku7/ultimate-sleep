@@ -17,10 +17,9 @@ import java.util.UUID;
  * Night-skip engine: decides WHEN to skip (SIMPLE percentage path) and performs HOW every skip is
  * carried out (INSTANT or ACCELERATE), for both SIMPLE and VOTE requirement modes.
  *
- * The playersSleepingPercentage gamerule is pinned to 100 (the valid max -- 101 is rejected by the
- * gamerule command); vanilla still never self-skips because ServerLevelSleepSkipMixin redirects the
- * overworld sleep check to our skipPending flag. So the gamerule value is cosmetic; the mixin is
- * what guarantees the mod owns every skip.
+ * The mod owns every skip: vanilla never self-skips because ServerLevelSleepSkipMixin redirects the
+ * overworld sleep check to our skipPending flag (the playersSleepingPercentage gamerule is not
+ * touched -- it is rejected by the 26.x command parser and is unnecessary given the mixin).
  *
  * performSkip() is the single entry point used by SIMPLE (here) and VOTE (VoteManager):
  *   - INSTANT  -> requestSkip(): the mixin lets vanilla jump to morning (+wake +weather).
@@ -38,6 +37,9 @@ public final class SleepEngine {
     private volatile boolean skipPending = false;
     private volatile float accelRate = 1.0f;
     private long accelStartTick = 0;
+    // Set when a mod-driven skip begins (INSTANT or ACCELERATE); drives the one-shot notify_wake
+    // broadcast that fires when morning actually arrives.
+    private volatile boolean awaitingMorning = false;
 
     public SleepEngine(Settings settings) {
         this.settings = settings;
@@ -50,6 +52,7 @@ public final class SleepEngine {
     /** Ask the skip mixin to let vanilla advance the night on the next overworld tick. */
     public void requestSkip() {
         this.skipPending = true;
+        this.awaitingMorning = true;
     }
 
     public boolean isSkipPending() {
@@ -93,6 +96,7 @@ public final class SleepEngine {
         accelStartTick = server.getTickCount();
         setClockRate(server, ow, accelRate);
         accelerating = true;
+        awaitingMorning = true;
         UltimateSleep.LOGGER.info(String.format(
                 "[UltimateSleep] ACCELERATE start: speed=%s target=%.1fs remaining=%d ticks -> clock rate=%.2f/tick (expect ~%.1fs)",
                 settings.string("accelerate_speed"), secs, remaining, accelRate, secs));
@@ -108,6 +112,22 @@ public final class SleepEngine {
                 settings.string("accelerate_speed"), elapsed, elapsed / 20.0, accelRate));
         accelerating = false;
         accelRate = 1.0f;
+    }
+
+    /**
+     * One-shot wake broadcast: once a mod-driven skip has reached morning, announce it (if
+     * notify_wake is on) and clear the flag. Fires for both INSTANT (vanilla jumped to dawn) and
+     * ACCELERATE (time-lapse finished). Runs every tick before the accelerating early-return.
+     */
+    private void notifyWakeIfDue(MinecraftServer server) {
+        if (!awaitingMorning) return;
+        ServerLevel ow = server.overworld();
+        if (ow != null && !ow.isBrightOutside()) return; // not morning yet
+        awaitingMorning = false;
+        if (settings.bool("notify_wake")) {
+            server.getPlayerList().broadcastSystemMessage(Component.literal(
+                    "[Ultimate Sleep] Good morning -- the night has passed."), false);
+        }
     }
 
     /** While accelerating, stop and wake everyone once dawn arrives. Runs every tick, any mode. */
@@ -134,6 +154,7 @@ public final class SleepEngine {
     }
 
     public void tick(MinecraftServer server) {
+        notifyWakeIfDue(server);
         manageAcceleration(server);
         if (accelerating) return; // night is time-lapsing; don't evaluate new triggers
 

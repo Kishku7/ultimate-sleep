@@ -75,7 +75,7 @@ public final class Settings {
         reg("highlight_blocking_mobs", Type.BOOL, false, "Outline mobs preventing sleep.");
         // feedback
         reg("show_sleepers_in_chat", Type.BOOL, true, "Broadcast who is sleeping + progress.");
-        reg("show_sleepers_on_vote_screen", Type.BOOL, true, "Show sleepers/tally on the vote popup.");
+        reg("show_sleepers_on_vote_screen", Type.BOOL, true, "Show the live yes/no tally and who's in bed on the vote prompt.");
         reg("notify_wake", Type.BOOL, true, "Broadcast the morning/wake event.");
         // rewards
         reg("reward_regeneration", Type.BOOL, false, "Grant Regeneration on a successful sleep.");

@@ -105,9 +105,6 @@ cost.
   current config to a client that has the mod; the client renders a paginated control panel
   (9 pages) and writes changes back over a private, permission-checked back-channel. Clients
   without the mod simply use the commands instead.
-- **Themed UI** matching the dark "Claude Design" mockup: custom-rendered buttons, green/grey
-  on-off toggles, yellow cycle selectors, red destructive actions, green/red vote buttons, themed
-  + centered edit fields, and a scrollable sleep-admin roster page.
 
 ### Flexible settings input
 

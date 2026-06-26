@@ -1,18 +1,22 @@
 # Ultimate Sleep
 
-An advanced, all-in-one, fully admin-configurable Minecraft sleep mod for Fabric. It folds the
-useful behaviors from ~180 surveyed Modrinth sleep mods (deduped to 52 distinct features) into a
-single mod where everything is a toggle. In singleplayer the player is the admin; on a server the
-controls are permission-gated. The mod is required on the **server only** -- it works for vanilla
-clients via chat/commands, and adds an optional in-game panel for clients that also have it.
+An advanced, all-in-one, fully admin-configurable sleep mod for Fabric. It folds the
+useful behaviors from ~180 surveyed Modrinth sleep mods (deduped to 52 distinct features)
+into a single mod where everything is a toggle. In singleplayer the player is the admin;
+on a server the controls are permission-gated. The mod is required on the **server only**
+-- it works for vanilla clients via chat/commands, and adds an optional in-game panel for
+clients that also have it.
 
-- **Loader:** Fabric only (until 1.0; other loaders + backports considered afterward).
-- **Minecraft:** built against 26.1.2, declared compatible with `26.1.x` and `26.2.x`
-  (`fabric.mod.json` minecraft range `>=26.1 <26.3`). A dedicated NeoForge build is post-1.0.
-- **Author:** Kishku7 · **License:** ARR · single source of truth for design: `FUNCTIONAL_SPEC.md`.
+- **Version:** 1.0.0.
+- **Loader:** Fabric only. The code is split into a shared core plus a thin per-loader layer,
+  so another loader is feasible later, but no NeoForge (or other) build exists yet.
+- **Minecraft:** shipped as three separate Fabric jars built from one unified source --
+  **26.1** and **26.2** (release) and **26.3-snapshot-1** (beta). Each jar targets a single
+  MC line.
+- **Author:** Kishku7 -- **License:** ARR.
 
-Status legend: **[Have]** working today · **[Partial]** partly working / refinement pending ·
-**[Planned]** designed, not built yet.
+Status legend: **[Have]** working today -- **[Partial]** partly working / refinement pending
+-- **[Planned]** designed, not built yet.
 
 ---
 
@@ -28,35 +32,38 @@ The core. One setting, `requirement_mode`, picks how a night gets skipped.
 - **[Have] VOTE mode.** The first player to climb into a bed auto-starts a server-wide vote (so
   nobody waits in bed alone). Everyone non-AFK votes during a countdown window; the result is
   tallied by the chosen pass rule and the night skips on a pass.
-  - Vote via `/usleep yes` / `/usleep no` (works on any client), or with the on-screen popup.
+  - Vote via `/usleep yes` / `/usleep no` (works on any client), or with the on-screen prompt.
   - Getting into a bed mid-vote counts as an automatic YES.
   - Pass rules (`vote_pass_rule`): **MAJORITY_CAST** (yes > no), **PERCENT_CAST** (yes reaches
     `vote_pass_percentage` of votes cast), or **MAJORITY_NON_AFK** (majority of all non-AFK
     players -- the default).
-- **[Have] Mod owns every skip.** The vanilla `playersSleepingPercentage` gamerule is pinned to
-  101 so the game can *never* skip the night on its own -- even if every player piles into bed.
-  The night advances only when Ultimate Sleep decides it should, which keeps behavior
-  predictable and debuggable.
+- **[Have] Mod owns every skip.** A server-side mixin gates vanilla's own sleep check so the
+  game can *never* skip the night on its own -- even if every player piles into bed. The night
+  advances only when Ultimate Sleep decides it should, which keeps behavior predictable and
+  debuggable. The mod is also the sole voice -- vanilla's own "x/y sleeping" message is
+  suppressed.
 
 ### Skip behavior (how the triggered skip is carried out)
 
 - **[Have] INSTANT.** Jump straight to morning (vanilla-style).
-- **[Have] ACCELERATE.** Time-lapse the night instead of jumping, at one of four named speeds (Slow/Slowish/Quick/Fast = ~10/7.5/5/2.5 real seconds)
-  .
+- **[Have] ACCELERATE.** Time-lapse the night instead of jumping, by driving the overworld
+  clock rate, at one of four named speeds (Slow / Slowish / Quick / Fast = ~10 / 7.5 / 5 / 2.5
+  real seconds).
 - **[Have] Preserve weather.** Optionally keep rain/storms running across the skip instead of
   clearing them.
 
 ### Auto-sleep
 
-- **[Have] Per-player opt-in** with `/usleep auto`; the choice is saved per player. Default
-  feature state is ON (`auto_sleep_enabled`), admin-disableable.
+- **[Have] Per-player opt-in** with `/usleep auto`; the choice is saved per player. The feature
+  is admin-gated by `auto_sleep_enabled` (on by default).
 - **[Have] Dusk auto-bed.** At the earliest sleepable time, the server puts opted-in players to
-  bed automatically if they're within reach of a bed -- exactly as if they'd right-clicked it.
-- **[Have] Missed-sleep notice** when no usable bed is in reach.
-- **[Partial] Home-bed targeting + Travelers' Backpack sleeping bag.** Planned: prefer the
-  player's actual spawn bed, and support sleeping in place via a Travelers' Backpack sleeping
-  bag (soft dependency). Currently uses the nearest reachable bed and does not yet invoke the
-  backpack sleeping bag.
+  bed automatically if a bed is within reach -- exactly as if they'd right-clicked it.
+- **[Have] Home-bed targeting.** Prefers your own spawn bed when it is reachable, otherwise the
+  nearest reachable bed.
+- **[Have] Travelers' Backpack sleeping bag** (soft dependency -- runtime-detected, no compile
+  dependency). When no bed is reachable, auto-sleep can sleep in place using a loose sleeping-bag
+  item or a bag attached to a worn Travelers' Backpack; the placed bag is removed on wake.
+- **[Have] Missed-sleep notice** when neither a bed nor a sleeping bag is in reach.
 
 ### AFK system
 
@@ -66,7 +73,7 @@ The core. One setting, `requirement_mode`, picks how a night gets skipped.
 - **[Have] Conditional `/afk` alias.** If no other mod already provides `/afk`, Ultimate Sleep
   registers `/afk` as a direct alias of `/usleep afk`. If another mod owns it, we stand down.
 - **[Have] Feeds the engine.** AFK players can be excluded from the sleep requirement
-  (`exclude_afk_from_requirement`) and get no vote and no vote popup.
+  (`exclude_afk_from_requirement`) and get no vote and no vote prompt.
 
 ### Rewards on waking
 
@@ -76,15 +83,16 @@ Granted on a successful sleep/skip; each is an independent admin toggle, usable 
 - **[Have] Golden carrot** -- one per wake; **drops at your feet if your inventory is full** so
   it's never lost.
 - **[Have] Speed boost** of `reward_speed_boost_percent`% (default 25) for
-  `reward_speed_boost_minutes` (default 5).
+  `reward_speed_boost_minutes` (default 5). Applied via vanilla Speed levels, so the percentage
+  is approximate.
 
 ### Accessibility / sleep-rule overrides
 
 - **[Have] Sleep anytime** -- bypass the day/time restriction on using a bed.
 - **[Have] Ignore monsters** -- sleep even with hostile mobs nearby.
 - **[Have] Ignore "bed too far"** -- skip the distance check when entering a bed.
-- **[Partial] Highlight blocking mobs** -- glow the monsters that would stop you sleeping.
-  Server-side glow is in; per-viewer-only refinement is pending.
+- **[Have] Highlight blocking mobs** -- outline the monsters that would stop you sleeping,
+  visible only to you (a per-viewer glow with a timed revert).
 
 ### World progression while sleeping
 
@@ -92,8 +100,7 @@ Skipping the night can optionally advance the world, not just the clock. A maste
 (`world_progression_enabled`) plus per-category sub-toggles so admins can scope the performance
 cost.
 
-- **[Have] Crops & plants** -- crop growth, saplings/tree growth, bamboo, sugar cane/cactus, and
-  orphaned-leaf decay.
+- **[Have] Crops & plants** -- crop growth, saplings/tree growth, and plant growth.
 - **[Have] Animal husbandry** -- breeding cooldowns and baby-animal growth.
 - **[Have] Smelting** -- furnaces, smokers, blast furnaces continue.
 - **[Have] Despawn timers** -- item/entity despawn timers advance (off by default).
@@ -102,23 +109,23 @@ cost.
 
 - **[Have] Sleep status in chat** (`show_sleepers_in_chat`) -- a concise broadcast as players
   start/stop sleeping, e.g. `<name> is sleeping, 1 of 2 required. Need 1 more.` This also serves
-  vanilla clients with no UI. The mod is the sole voice -- vanilla's own "x/y" message is
-  suppressed to avoid double/confusing counts.
-- **[Have] Vote popup** -- a non-blocking bottom-of-screen bar with the question and Yes/No
-  buttons plus a private "your vote carried / you were outvoted" result.
-- **[Partial] Live sleeper list on the vote screen** (`show_sleepers_on_vote_screen`).
-- **[Have] Wake broadcast** (`notify_wake`).
+  vanilla clients with no UI.
+- **[Have] Non-blocking vote prompt** -- a bottom-of-screen action-bar message (never a blocking
+  screen, so gameplay is never frozen) plus a private "your vote carried / you were outvoted"
+  result.
+- **[Planned] Live sleeper list / tally on the vote prompt** (`show_sleepers_on_vote_screen`) --
+  the setting exists but is not yet wired up.
+- **[Planned] Wake broadcast** (`notify_wake`) -- the setting exists but is not yet acted on.
 
 ### In-game admin panel (optional client UI)
 
 - **[Have] Server-driven panel** opened with `/usleep gui`. The server pushes the open request
   and the current config to a client that has the mod; the client renders a paginated control
-  panel and writes changes back over a private back-channel -- all permission-checked
-  server-side. Clients without the mod simply use the commands instead.
+  panel (9 pages) and writes changes back over a private, permission-checked back-channel.
+  Clients without the mod simply use the commands instead.
 - **[Have] Themed UI** matching the dark "Claude Design" mockup: custom-rendered buttons,
   green/grey on-off toggles, yellow cycle selectors, red destructive actions, green/red vote
-  buttons, and a scrollable sleep-admin roster page.
-- **[Planned] Polish** -- edit-field theming and final pixel matching.
+  buttons, themed + centered edit fields, and a scrollable sleep-admin roster page.
 
 ### Flexible settings input
 
@@ -129,40 +136,20 @@ cost.
 
 ---
 
-## Commands (`/usleep`)
-
-| command | who | purpose |
-|---------|-----|---------|
-| `/usleep status` | everyone | short status line (mode, requirement, AFK count, active vote) |
-| `/usleep query` | everyone | full settings dump + who owns `/afk` |
-| `/usleep afk` | everyone | toggle your own AFK (`/afk` alias when available) |
-| `/usleep auto` | everyone | toggle your auto-sleep opt-in |
-| `/usleep yes` / `/usleep no` | everyone | vote in the active sleep vote |
-| `/usleep gui` | everyone | open the in-game panel (modded clients) |
-| `/usleep set <key> <value>` | sleep-admin / op 2 | everyday settings |
-| `/usleep admin set <key> <value>` | op 4 / sleep-admin | full settings authority |
-| `/usleep admin afk <player>` | op 4 / sleep-admin | force a player AFK |
-| `/usleep admin admins add\|remove\|list` | op 4 / sleep-admin | manage the sleep-admin roster |
-
-A designated **sleep-admin** is treated as op-4 for all Ultimate Sleep commands, so owners can
-delegate sleep config without handing out vanilla operator.
-
----
-
 ## Settings reference
 
-Grouped as core / engine / rewards / feedback / world-progression / auto-sleep / afk /
-accessibility. Persisted to JSON.
+Typed (bool / int / enum / percent), JSON-persisted. Per-player state (AFK status, auto-sleep
+opt-in, home bed) is runtime player data, not in this global table.
 
 | key | type | default |
 |-----|------|---------|
 | enabled | bool | true |
 | requirement_mode | SIMPLE \| VOTE | SIMPLE |
-| required_sleep_percentage | int | 50 |
+| required_sleep_percentage | percent | 50 |
 | exclude_afk_from_requirement | bool | true |
 | vote_duration_seconds | int | 30 |
 | vote_pass_rule | MAJORITY_CAST \| PERCENT_CAST \| MAJORITY_NON_AFK | MAJORITY_NON_AFK |
-| vote_pass_percentage | int | 50 |
+| vote_pass_percentage | percent | 50 |
 | skip_mode | INSTANT \| ACCELERATE | INSTANT |
 | accelerate_speed | SLOW \| SLOWISH \| QUICK \| FAST | QUICK |
 | preserve_weather | bool | false |
@@ -177,7 +164,7 @@ accessibility. Persisted to JSON.
 | reward_regeneration_minutes | int | 5 |
 | reward_golden_carrot | bool | false |
 | reward_speed_boost | bool | false |
-| reward_speed_boost_percent | int | 25 |
+| reward_speed_boost_percent | percent | 25 |
 | reward_speed_boost_minutes | int | 5 |
 | world_progression_enabled | bool | false |
 | progress_crops | bool | true |
@@ -188,42 +175,57 @@ accessibility. Persisted to JSON.
 | afk_threshold_seconds | int | 180 |
 | provide_afk_command | bool | true |
 
-Per-player state (AFK status, auto-sleep opt-in, home bed) is runtime player data, not in the
-global settings table.
+`show_sleepers_on_vote_screen` and `notify_wake` are registered and editable, but the behaviors
+they gate are not yet wired up (see the [Planned] items above).
 
 ---
 
-## Roadmap to 1.0
+## Status & roadmap
 
-Done: settings registry + persistence, permission tiers + sleep-admin roster, SIMPLE & VOTE
-engines, mod-owned skip, INSTANT/ACCELERATE, preserve-weather, accessibility toggles, rewards,
-world progression, AFK system + `/afk` alias, auto-sleep (dusk auto-bed), client panel + vote
-popup + theming.
+1.0.0, on Fabric, for 26.1 and 26.2 (release) and 26.3-snapshot-1 (beta).
 
-Remaining before 1.0: Travelers' Backpack sleeping-bag + home-bed auto-sleep path, per-viewer
-mob highlight, vote-screen live sleeper list, GUI edit-field theming, then a 26.2 verification
-pass.
-
-Post-1.0: other loaders / backports, and a deferred "flavor" track (nightmares, dreams, sleep
-deprivation, sounds, etc.).
+Planned next: wire up the wake broadcast (`notify_wake`) and the live sleeper list / tally on the
+vote prompt (`show_sleepers_on_vote_screen`); additional loaders (e.g. NeoForge) and version
+backports; and a deferred "flavor" track (nightmares, dreams, sleep deprivation, ambient sounds).
 
 ---
 
-## Build
+## Commands
 
-```
-cd fabric/26.1.2
-./gradlew build      # Java 25, Fabric Loom 1.16, Gradle 9.4.1
-```
+Everything lives under `/usleep`. The player and informational commands are open to everyone;
+the configuration commands are permission-gated. A designated **sleep-admin** needs no operator
+level and is treated as op-4 for every Ultimate Sleep command, so owners can delegate sleep
+configuration without handing out vanilla operator.
 
-Output jar: `fabric/26.1.2/build/libs/ultimate-sleep-<version>.jar`.
+### Open the control panel
 
-## Layout
+- `/usleep gui` -- open the in-game admin panel. Requires the Ultimate Sleep client mod; vanilla
+  clients use the chat commands below instead.
 
-```
-ultimate-sleep/
-  README.md            this file
-  FUNCTIONAL_SPEC.md   authoritative design/spec
-  research/            Modrinth sleep-mod feature survey (input for the feature set)
-  fabric/26.1.2/       the Fabric loom project (build here)
-```
+### Everyday player commands (everyone)
+
+- `/usleep status` -- short status line: mode, requirement percentage, and current AFK count.
+- `/usleep query` -- full settings dump (`key = value`) plus who currently owns `/afk`.
+- `/usleep afk` -- toggle your own AFK state.
+  - `/afk` -- alias of `/usleep afk`, registered only when no other mod already provides it.
+- `/usleep auto` -- toggle your personal auto-sleep opt-in.
+  - Available only while the admin has `auto_sleep_enabled` turned on.
+
+### During a sleep vote (VOTE mode, while a vote is running)
+
+- `/usleep yes` -- vote to skip the night.
+- `/usleep no` -- vote against skipping.
+
+### Change settings (sleep-admin, or op level 2+)
+
+- `/usleep set <key> <value>` -- change a setting. Setting keys tab-complete, and boolean/enum
+  values tab-complete once a key is typed.
+
+### Administration (sleep-admin, or op level 3+)
+
+- `/usleep admin set <key> <value>` -- change any setting at the administration tier.
+- `/usleep admin afk <player>` -- force another player into AFK.
+- `/usleep admin admins` -- manage the sleep-admin roster:
+  - `/usleep admin admins add <player>` -- grant sleep-admin to a player.
+  - `/usleep admin admins remove <player>` -- revoke a player's sleep-admin.
+  - `/usleep admin admins list` -- list the current sleep-admins.

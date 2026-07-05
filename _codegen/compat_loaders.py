@@ -27,10 +27,11 @@ import compat
 
 
 def check_range(ver):
-    if compat._vt(ver) < (1, 20, 5):
+    if compat._vt(ver) < (1, 20, 6):
         raise ValueError(
-            "compat_loaders: NeoForge flavour supports 1.20.5+ only, got %s "
-            "(1.20.4 is the IPayloadRegistrar era -- add emitters here before claiming it)" % ver)
+            "compat_loaders: NeoForge flavour supports 1.20.6+ only, got %s "
+            "(neo 20.5.x beta lacks CanPlayerSleepEvent -- boot-proven NoClassDefFoundError "
+            "2026-07-05; 1.20.4 is the IPayloadRegistrar era)" % ver)
     return ver
 
 

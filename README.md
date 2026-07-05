@@ -57,7 +57,7 @@ build scripts drive this matrix, so you normally never invoke them manually.
 
 ## Version coverage
 
-27 jars total from 24 build cells. Each cell folder is named after the MC version it is
+28 jars total from 25 build cells. Each cell folder is named after the MC version it is
 built against; the jar it produces claims the full range that build actually serves.
 
 **Fabric (10 jars)**
@@ -77,7 +77,7 @@ built against; the jar it produces claims the full range that build actually ser
 
 | Cell | Jar covers |
 |---|---|
-| `NeoForge/1.20.6` | 1.20.5 - 1.20.6 |
+| `NeoForge/1.20.6` | 1.20.6 |
 | `NeoForge/1.21.1` | 1.21 - 1.21.1 |
 | `NeoForge/1.21.2` | 1.21.2 - 1.21.4 |
 | `NeoForge/1.21.5` | 1.21.5 - 1.21.7 |
@@ -86,13 +86,14 @@ built against; the jar it produces claims the full range that build actually ser
 | `NeoForge/1.21.11` | 1.21.11 |
 | `NeoForge/26` | 26.1.x and 26.2 (two jars from one cell) |
 
-**Forge (8 jars)**
+**Forge (9 jars)**
 
 | Cell | Jar covers |
 |---|---|
 | `Forge/1.20.1` | 1.20.1 |
 | `Forge/1.20.6` | 1.20.5 - 1.20.6 |
 | `Forge/1.21.1` | 1.21.1 |
+| `Forge/1.21.4` | 1.21.3 - 1.21.4 |
 | `Forge/1.21.5` | 1.21.5 |
 | `Forge/1.21.7` | 1.21.6 - 1.21.7 |
 | `Forge/1.21.8` | 1.21.8 |
@@ -104,10 +105,12 @@ built against; the jar it produces claims the full range that build actually ser
 - **Forge 1.20.2 - 1.20.4** -- Forge 48 removed the legacy networking API these Forge
   cells use.
 - **Forge 1.21 (1.21.0)** -- Forge 51 lacks the tick event the mod relies on.
-- **Forge 1.21.2 - 1.21.4 and 1.21.9** -- no suitable Forge releases exist for those
-  versions.
-- **NeoForge 1.20.5** -- upstream NeoForge for 1.20.5 is beta-only; the 1.20.5-1.20.6 jar
-  is built against 1.20.6.
+- **Forge 1.21.2** -- Forge never shipped a 1.21.2 release; the 1.21.3-1.21.4 jar starts at
+  1.21.3.
+- **Forge 1.21.9** -- upstream Forge for 1.21.9 is beta-only (59.x); excluded.
+- **NeoForge 1.20.5** -- upstream NeoForge for 1.20.5 is beta-only (20.5.x) and lacks
+  CanPlayerSleepEvent (added in NeoForge 20.6; boot-proven NoClassDefFoundError on
+  20.5.21-beta), so the NeoForge jar starts at 1.20.6.
 - **NeoForge 26.3** -- no NeoForge release for 26.3 exists yet; the cell matrix is
   extended when upstream ships.
 - **Forge 26.x** -- upstream Forge 26.x exists but is not targeted by this branch yet.

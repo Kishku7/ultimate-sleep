@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[52,)"
+loaderVersion="[53,)"
 license="ARR"
 
 [[mods]]
@@ -12,13 +12,13 @@ description='''An advanced, configurable sleep mod. Commands live under /usleep.
 [[dependencies.ultimate_sleep]]
 modId="forge"
 mandatory=true
-versionRange="[52,)"
+versionRange="[53,)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.ultimate_sleep]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.21.1,1.21.2)"
+versionRange="[1.21.3,1.21.5)"
 ordering="NONE"
 side="BOTH"

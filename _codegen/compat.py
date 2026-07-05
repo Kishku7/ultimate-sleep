@@ -105,9 +105,11 @@ def gamerules_import(v):
     return "import %s;" % pkg
 
 def progression_anchor(v):
-    if is26(v):
-        return "Lnet/minecraft/world/clock/ServerClockManager;moveToTimeMarker(Lnet/minecraft/core/Holder;Lnet/minecraft/resources/ResourceKey;)Z"
-    return "Lnet/minecraft/server/level/ServerLevel;setDayTime(J)V"
+    # UNIVERSAL anchor (2026-07-05 smoketest fix): NeoForge patches ServerLevel.tick's sleep block,
+    # so the vanilla moveToTimeMarker/setDayTime INVOKEs are not reliably present there. The
+    # wakeUpAllPlayers() call survives every loader's patching on every version, and injecting
+    # before it preserves semantics (ticksSlept math uses gameTime, which the skip never touches).
+    return "Lnet/minecraft/server/level/ServerLevel;wakeUpAllPlayers()V"
 
 def rndtick_get(v):
     if renamed(v): return "self.getGameRules().get(GameRules.RANDOM_TICK_SPEED)"

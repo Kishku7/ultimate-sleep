@@ -24,7 +24,7 @@ foreach ($c in $cells) {
     if (-not (Want $c.Name)) { continue }
     Write-Host "=== US NeoForge cell $($c.Name) ==="
     $bg = Join-Path $c.FullName "build.gradle"
-    if ((Get-Content $bg -Raw) -match 'srcDir\s+"gen"') {
+    if ((Get-Content $bg -Raw) -match 'srcDirs?\s*=?\s*\[?\s*[''"]gen') {
         & (Join-Path $PSScriptRoot "cog-gen.ps1") -Cell "NeoForge\$($c.Name)" -McVer $c.Name -Loader neoforge
         if ($LASTEXITCODE -ne 0) { Add-Content $status "FAIL cog $($c.Name)"; throw "cog-gen FAILED $($c.Name)" }
     }

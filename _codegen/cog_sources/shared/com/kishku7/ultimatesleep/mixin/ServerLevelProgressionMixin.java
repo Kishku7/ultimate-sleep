@@ -42,7 +42,7 @@ public abstract class ServerLevelProgressionMixin {
     //]]]
     @Inject(method = "tick(Ljava/util/function/BooleanSupplier;)V",
             at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/world/clock/ServerClockManager;moveToTimeMarker(Lnet/minecraft/core/Holder;Lnet/minecraft/resources/ResourceKey;)Z"))
+                    target = "Lnet/minecraft/server/level/ServerLevel;wakeUpAllPlayers()V"))
     //[[[end]]]
     private void ultimateSleep$onSkip(BooleanSupplier haveTime, CallbackInfo ci) {
         if (!UltimateSleep.settings().bool("world_progression_enabled")) return;

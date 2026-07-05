@@ -79,8 +79,12 @@ if (-not $modernNet) {
 
 # 5. resources: shared lang + pack.mcmeta (range form REQUIRED for pf > 64)
 robocopy (Join-Path $repo "shared_minecraft\src\main\resources") $genR /E /NJH /NJS /NDL /NC /NS /NP | Out-Null
-if ([int]$pf -gt 64) {
+if ([int]$pf -gt 81) {
+    # 26.x codec demands min_format/max_format (plain int FATALs Neo dedicated datapack load)
     $mcmeta = '{"pack":{"description":"Ultimate Sleep","pack_format":' + $pf + ',"min_format":' + $pf + ',"max_format":' + $pf + '}}'
+} elseif ([int]$pf -gt 64) {
+    # 1.21.9-1.21.11 codec (PackFormat.packCodec) wants pack_format + supported_formats
+    $mcmeta = '{"pack":{"description":"Ultimate Sleep","pack_format":' + $pf + ',"supported_formats":[' + $pf + ',' + $pf + ']}}'
 } else {
     $mcmeta = '{"pack":{"description":"Ultimate Sleep","pack_format":' + $pf + '}}'
 }
@@ -96,16 +100,23 @@ if (($flavour -eq 'forge') -and $java17) {
 }
 $forgeMixins = ""
 if ($flavour -eq 'forge') {
-    $forgeMixins = ",`n    `"ForgeSleepMonstersMixin`""
+    # Forge has no sleep events: full ServerPlayerSleepMixin (forge twin) + NOT_SAFE monsters mixin.
+    $forgeMixins = ",`n    `"ServerPlayerSleepMixin`",`n    `"ForgeSleepMonstersMixin`""
+} elseif ($flavour -eq 'fabric') {
+    # Fabric keeps ONLY the bedInRange leg pre-26 (shared twin emits no day-gate leg -- fabric-api
+    # owns that redirect and conflicts at equal priority; sleep_anytime uses ALLOW_SLEEP_TIME).
+    $forgeMixins = ",`n    `"ServerPlayerSleepMixin`""
 }
+# NeoForge lists NO ServerPlayerSleepMixin: NeoForge patches startSleepInBed (vanilla INVOKEs gone);
+# CanPlayerSleepEvent covers all accessibility overrides there. Smoketest-proven 2026-07-05.
 $mixinsJson = @"
 {
   "required": true,
+  "minVersion": "0.8",
   "package": "com.kishku7.ultimatesleep.mixin",
   "compatibilityLevel": "$compatLevel",
 $refmapLine  "mixins": [
     "EntityFlagsAccessor",
-    "ServerPlayerSleepMixin",
     "ServerLevelSleepSkipMixin",
     "ServerLevelWeatherMixin",
     "ServerLevelProgressionMixin",

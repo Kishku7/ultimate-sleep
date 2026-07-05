@@ -101,7 +101,25 @@ public final class UltimateSleep {
      * NOT_SAFE problem entirely so sleep proceeds despite nearby monsters.
      */
     private void onCanSleep(CanPlayerSleepEvent event) {
-        if (event.getProblem() != Player.BedSleepingProblem.NOT_SAFE) return;
+        var problem = event.getProblem();
+        if (problem == null) return;
+        // ignore_bed_too_far: clear the distance problem (NeoForge patches startSleepInBed, so the
+        // vanilla bedInRange INVOKE is not mixin-targetable here -- the event is the seam).
+        if (problem == Player.BedSleepingProblem.TOO_FAR_AWAY) {
+            if (SETTINGS.bool("ignore_bed_too_far")) event.setProblem(null);
+            return;
+        }
+        // sleep_anytime: clear time/dimension gate problems. Identity-safe across eras: everything
+        // that is not one of the four stable constants is a time/place gate (incl. BedRule-derived
+        // problems at 1.21.11+ which are fresh record instances).
+        if (problem != Player.BedSleepingProblem.NOT_SAFE) {
+            if (problem != Player.BedSleepingProblem.OBSTRUCTED
+                    && problem != Player.BedSleepingProblem.OTHER_PROBLEM
+                    && SETTINGS.bool("sleep_anytime")) {
+                event.setProblem(null);
+            }
+            return;
+        }
         if (!(event.getEntity() instanceof ServerPlayer sp) || !(sp.level() instanceof ServerLevel sl)) return;
 
         if (SETTINGS.bool("highlight_blocking_mobs")) {

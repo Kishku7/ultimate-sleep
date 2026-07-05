@@ -74,7 +74,7 @@ def sleep_pred(ver):
 #     onSleepingTimeCheck (50+; 61 adds a BedRule arg). DEFAULT preserves vanilla, ALLOW
 #     bypasses -> sleep_anytime is a SleepingTimeCheckEvent listener, NOT a mixin.
 #   - The NOT_SAFE monsters block stays vanilla -> ForgeSleepMonstersMixin redirects the
-#     getEntitiesOfClass call. Receiver drift (vanilla): Level <=1.21.5, ServerLevel >=1.21.8.
+#     getEntitiesOfClass call. Receiver drift (FORGE-patched): Level <=1.21.5, ServerLevel >=1.21.6.
 #
 # Event bus eras (bank-vault gate-proof 2026-07-03 + M1 1.21.10/1.21.11 builds):
 #   - EB6 (<= Forge 55 / MC 1.21.5): MinecraftForge.EVENT_BUS.addListener; base-Event
@@ -170,7 +170,7 @@ def forge_entry_wiring(ver):
 def forge_entities_receiver(ver):
     # vanilla receiver of the NOT_SAFE getEntitiesOfClass call in startSleepInBed
     forge_check_range(ver)
-    return "ServerLevel" if compat._vt(ver) >= (1, 21, 8) else "Level"
+    return "ServerLevel" if compat._vt(ver) >= (1, 21, 6) else "Level"   # r2 smoketest: Forge 56/57 patch already ServerLevel-owned
 
 
 def forge_entities_target(ver):

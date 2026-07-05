@@ -114,6 +114,17 @@ public final class UltimateSleep implements ModInitializer {
         });
         //[[[end]]]
 
+        //[[[cog
+        //if not compat.renamed(ver):
+        //    cog.outl('        // sleep_anytime: pre-1.21.11 fabric-api owns the day-gate redirect, so the override goes')
+        //    cog.outl('        // through its ALLOW_SLEEP_TIME event (the BedRule mixin leg only exists on 1.21.11+).')
+        //    cog.outl('        EntitySleepEvents.ALLOW_SLEEP_TIME.register((player, sleepingPos, vanillaResult) -> {')
+        //    cog.outl('            if (!vanillaResult && SETTINGS.bool("sleep_anytime")) return InteractionResult.SUCCESS;')
+        //    cog.outl('            return InteractionResult.PASS;')
+        //    cog.outl('        });')
+        //]]]
+        //[[[end]]]
+
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             var usleep = UltimateSleepCommands.register(dispatcher);
             AFK_COMMANDS.registerAfkCommandIfAbsent(dispatcher, usleep.getChild("afk"));

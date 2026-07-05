@@ -54,14 +54,10 @@ public abstract class ServerPlayerSleepMixin {
     //    cog.outl('        return rule.canSleep(level);')
     //    cog.outl('    }')
     //else:
-    //    gate = "isBrightOutside" if compat.has_bright(ver) else "isDay"
-    //    cog.outl('    @Redirect(method = "startSleepInBed",')
-    //    cog.outl('            at = @At(value = "INVOKE",')
-    //    cog.outl('                    target = "%s"))' % compat.sleep_gate_target(ver))
-    //    cog.outl('    private boolean ultimateSleep$dayGate(Level level) {')
-    //    cog.outl('        if (UltimateSleep.settings().bool("sleep_anytime")) return false; // pretend night')
-    //    cog.outl('        return level.%s();' % gate)
-    //    cog.outl('    }')
+    //    # PRE-26 FABRIC: NO day-gate redirect. fabric-api entity-events redirects the same
+    //    # Level.isDay/isBrightOutside call (equal priority -> injection failure, smoketest
+    //    # 2026-07-05). sleep_anytime is handled by the ALLOW_SLEEP_TIME event in the entry.
+    //    cog.outl('    // (day-gate leg intentionally absent pre-26: ALLOW_SLEEP_TIME event covers it)')
     //]]]
     @Redirect(method = "startSleepInBed",
             at = @At(value = "INVOKE",

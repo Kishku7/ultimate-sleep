@@ -5,3 +5,5 @@ run/
 *.log
 dist/
 gen/
+scripts/_publish_*
+scripts/_release_*

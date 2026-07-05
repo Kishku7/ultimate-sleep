@@ -41,7 +41,7 @@ import java.util.function.Consumer;
  * "Unknown custom packet payload: ultimate_sleep:sync/:open". The unhandled flag also makes
  * PacketUtils.ensureRunningOnSameThread re-queue the packet off the network thread, so the
  * whole chain (decode + consumer) runs TWICE -- the singleplayer double-decode the sp()
- * wrapper was papering over. Uniform on Forge 50-61 (Sputnic r1/r2 latest.log greps,
+ * wrapper was papering over. Uniform on Forge 50-61 (smoketest r1/r2 latest.log greps,
  * 2026-07-05): NOT a Forge-60 quirk; the legacy 1.20.1 SimpleChannel flavour is unaffected.
  */
 public final class UltimateSleepNet {

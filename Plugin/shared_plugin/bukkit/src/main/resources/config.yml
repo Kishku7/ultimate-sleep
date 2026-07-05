@@ -1,0 +1,57 @@
+# Ultimate Sleep (plugin) -- config.
+# Every key is also settable live via "/usleep set <key> <value>" (permission ultimatesleep.set,
+# a sleep-admin, or console) or "/usleep admin set ..." (ultimatesleep.admin); changes made
+# in-game are written back here. "/usleep query" dumps the live values.
+# Same keys/defaults as the Ultimate Sleep mod, minus the ones a Bukkit plugin cannot honestly
+# implement (highlight_blocking_mobs, progress_smelting, progress_despawn_timers) -- see
+# Plugin/README.md in the source repo.
+
+settings:
+  # -- core --
+  enabled: true
+  # -- engine --
+  # requirement_mode: SIMPLE (percentage) or VOTE
+  requirement_mode: SIMPLE
+  required_sleep_percentage: 50
+  exclude_afk_from_requirement: true
+  vote_duration_seconds: 30
+  # vote_pass_rule: MAJORITY_CAST, PERCENT_CAST, or MAJORITY_NON_AFK
+  vote_pass_rule: MAJORITY_NON_AFK
+  vote_pass_percentage: 50
+  # skip_mode: INSTANT or ACCELERATE
+  skip_mode: INSTANT
+  # accelerate_speed: SLOW (10s), SLOWISH (7.5s), QUICK (5s), FAST (2.5s)
+  accelerate_speed: QUICK
+  preserve_weather: false
+  # -- accessibility --
+  sleep_anytime: false
+  sleep_ignore_monsters: false
+  ignore_bed_too_far: false
+  # -- feedback --
+  show_sleepers_in_chat: true
+  show_sleepers_on_vote_screen: true
+  notify_wake: true
+  # -- rewards --
+  reward_regeneration: false
+  reward_regeneration_minutes: 5
+  reward_golden_carrot: false
+  reward_speed_boost: false
+  reward_speed_boost_percent: 25
+  reward_speed_boost_minutes: 5
+  # -- world progression --
+  world_progression_enabled: false
+  progress_crops: true
+  # Not applied on Folia (cross-region entity iteration is not permitted there).
+  progress_animal_husbandry: true
+  # -- auto-sleep --
+  auto_sleep_enabled: true
+  # -- afk --
+  afk_threshold_seconds: 180
+  provide_afk_command: true
+
+# Designated sleep-admins (player names): full /usleep set + /usleep admin rights without op.
+# Managed via /usleep admin admins add|remove|list.
+sleep_admins: []
+
+# Players opted into auto-sleep at dusk (managed via /usleep auto).
+auto_sleep_players: []

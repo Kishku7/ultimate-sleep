@@ -1,0 +1,26 @@
+name: ${name}
+version: ${version}
+main: ${group}.ultimatesleep.UltimateSleepPlugin
+api-version: ${apiVersion}
+folia-supported: true
+load: POSTWORLD
+authors: [${author}]
+description: "${description}"
+website: https://github.com/Kishku7/ultimate-sleep
+commands:
+  usleep:
+    description: Ultimate Sleep - status, votes, AFK, auto-sleep, and settings
+    aliases: [us, ultimatesleep]
+    usage: /usleep status|query|afk|auto|yes|no|set|admin
+  afk:
+    description: Toggle your AFK status (alias for /usleep afk)
+    usage: /afk
+permissions:
+  ultimatesleep.set:
+    description: Use /usleep set (everyday sleep settings)
+    default: op
+  ultimatesleep.admin:
+    description: Use /usleep admin (full settings authority, AFK forcing, sleep-admin roster)
+    default: op
+    children:
+      ultimatesleep.set: true

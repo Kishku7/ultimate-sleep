@@ -14,7 +14,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 /**
  * Event wiring: accessibility bed-enter overrides + AFK activity signals.
  *
- * Accessibility (FUNCTIONAL_SPEC.md; the mod does these via ServerPlayerSleepMixin redirects --
+ * Accessibility (the functional spec; the mod does these via ServerPlayerSleepMixin redirects --
  * Bukkit exposes the SAME decisions as PlayerBedEnterEvent.BedEnterResult overrides):
  *   - NOT_POSSIBLE_NOW (daytime)  + sleep_anytime        -> allow.
  *   - NOT_SAFE (monsters nearby)  + sleep_ignore_monsters -> allow.

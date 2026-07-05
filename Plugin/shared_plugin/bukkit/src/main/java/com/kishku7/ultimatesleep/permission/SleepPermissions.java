@@ -13,7 +13,7 @@ import java.util.Set;
 /**
  * Command permission tiers + the sleep-admin roster (Bukkit port of the mod's SleepPermissions).
  *
- * Tiers (FUNCTIONAL_SPEC.md section 2, mapped onto Bukkit permissions):
+ * Tiers (the functional spec section 2, mapped onto Bukkit permissions):
  *   - player commands (status/query/afk/auto/yes/no): open to all.
  *   - /usleep set:   the "ultimatesleep.set" node (default op) OR a designated sleep-admin.
  *   - /usleep admin: the "ultimatesleep.admin" node (default op) OR a designated sleep-admin.

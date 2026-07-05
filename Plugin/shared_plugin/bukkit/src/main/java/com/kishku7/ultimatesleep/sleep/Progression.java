@@ -10,7 +10,7 @@ import org.bukkit.entity.LivingEntity;
 
 /**
  * World progression during a night skip -- the Bukkit-API subset of the mod's mixin-driven
- * progression (FUNCTIONAL_SPEC.md section 7).
+ * progression (the functional spec section 7).
  *
  * What a plugin CAN do without NMS:
  *   - progress_crops: a bounded randomTickSpeed boost -- for a skip of N ticks at the world's

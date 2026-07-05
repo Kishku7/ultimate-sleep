@@ -21,7 +21,7 @@ for its line via the runtime `Platform` facade.
 - `1.20.x/`, `1.21.x/`, `26.x/` - thin standalone gradle cells that srcDir the shared source.
   Unlike ChunkSmith there is no `shared_common` include: the mod's engine lives in
   `shared_minecraft` (MC-coupled), so the plugin re-implements the behavior against the Bukkit
-  API instead of sharing code. `FUNCTIONAL_SPEC.md` is the shared behavior authority.
+  API instead of sharing code. The mod's documented sleep behavior is the shared authority the plugin mirrors.
 
 Build: `pwsh scripts/build-plugin.ps1 [-Only 1.20.x]` from the repo root -> `dist/`.
 

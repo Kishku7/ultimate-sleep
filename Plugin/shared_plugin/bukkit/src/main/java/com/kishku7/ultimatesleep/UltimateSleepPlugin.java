@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * Ultimate Sleep -- the PaperMC/Folia/Spigot server plugin (Bukkit-native reimplementation of the
- * Fabric/NeoForge/Forge mod's server-side feature set; see FUNCTIONAL_SPEC.md and
+ * Fabric/NeoForge/Forge mod's server-side feature set; see the functional spec and
  * Plugin/README.md for the parity statement).
  *
  * One jar per MC major line (1.20.x / 1.21.x / 26.x, mirroring the ChunkSmith plugin split); the

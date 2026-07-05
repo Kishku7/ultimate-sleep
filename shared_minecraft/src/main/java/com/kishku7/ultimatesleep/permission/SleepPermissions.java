@@ -20,7 +20,7 @@ import java.util.Set;
 /**
  * Command permission tiers + the sleep-admin roster.
  *
- * Tiers (FUNCTIONAL_SPEC.md section 2):
+ * Tiers (the functional spec section 2):
  *   - query + player commands: open to all (handled by the commands, not here).
  *   - /usleep set: op level 2 (COMMANDS_GAMEMASTER) OR a designated sleep-admin.
  *   - /usleep admin ...: op level 3 (COMMANDS_ADMIN) OR a designated sleep-admin.

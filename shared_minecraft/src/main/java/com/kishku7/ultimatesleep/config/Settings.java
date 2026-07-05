@@ -21,7 +21,7 @@ import java.util.Map;
  *   /usleep [admin] set k v        -- set one
  *
  * Persisted as JSON in the Fabric config dir (ultimate_sleep.json). Values are stored as
- * strings and re-parsed on load. See FUNCTIONAL_SPEC.md section 10 for the catalogue.
+ * strings and re-parsed on load. See the functional spec section 10 for the catalogue.
  */
 public final class Settings {
 

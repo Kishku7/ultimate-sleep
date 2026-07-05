@@ -8,7 +8,6 @@ shared codebase.
   https://github.com/Kishku7/ultimate-sleep/tree/main
 - **Download (players):** https://modrinth.com/mod/ultimate-sleep
 - **Report issues / support:** https://github.com/Kishku7/mod_support
-- **Full feature/behavior reference for this branch:** [FUNCTIONAL_SPEC.md](FUNCTIONAL_SPEC.md)
 
 ---
 
@@ -162,8 +161,6 @@ minecraft-1.20-26.3/
                         cog-gen.ps1, check-sync.ps1
   dist/                 build output (final per-cell jars land here)
   research/             design research notes
-  FUNCTIONAL_SPEC.md    the authoritative feature/behavior specification
-  PROPOSED_1.0.md       original 1.0 proposal document
 ```
 
 ## How the code generation works

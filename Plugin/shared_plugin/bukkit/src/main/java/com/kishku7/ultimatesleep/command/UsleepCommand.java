@@ -14,7 +14,7 @@ import java.util.Locale;
 
 /**
  * The /usleep command tree + the /afk alias (Bukkit port of the mod's command surface,
- * FUNCTIONAL_SPEC.md section 2).
+ * the functional spec section 2).
  *
  * Player commands (open): status, query, afk, auto, yes, no.
  * Config commands (tiered): set <key> <value> (ultimatesleep.set node / sleep-admin / console),

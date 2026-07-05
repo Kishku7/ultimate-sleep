@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "ultimate_sleep",
+  "version": "${version}",
+  "name": "Ultimate Sleep",
+  "description": "An advanced, configurable sleep mod. Commands live under /usleep. Tracks AFK players, defers its /afk command to another mod when one already exists, and exposes an in-game admin panel driven by /usleep admin.",
+  "authors": [
+    "Kishku7"
+  ],
+  "license": "ARR",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.kishku7.ultimatesleep.UltimateSleep"
+    ],
+    "client": [
+      "com.kishku7.ultimatesleep.client.UltimateSleepClient"
+    ]
+  },
+  "mixins": [
+    "ultimate_sleep.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "${mcDep}"
+  }
+}

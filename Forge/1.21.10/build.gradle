@@ -1,0 +1,48 @@
+plugins {
+    id 'eclipse'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+
+version = "${mod_version}+${minecraft_version}-forge"
+group = 'com.kishku7'
+base { archivesName = 'ultimate-sleep' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+minecraft {
+    mappings channel: 'official', version: '1.21.10'
+    copyIdeResources = true
+}
+
+// Mojmap-runtime cell: no mixin gradle plugin / AP / refmap -- FG6 skips reobf here, so the
+// refmap would be dead weight and the AP only adds javac noise; the MixinConfigs manifest
+// attribute below is the sole (and sufficient) runtime wiring (lava-boats gotcha, cog-machinery).
+dependencies {
+    minecraft "net.minecraftforge:forge:${forge_version}"
+    // gson (shipped with MC) references these annotations; compile-time only (silences
+    // -Xlint:all classfile warnings on gson's class files).
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+    options.compilerArgs += ['-Xlint:all']
+}
+
+// Forge 1.20.6+ runs MOJMAP at runtime; FG6 skips reobf so the mixin plugin's manifest wiring
+// does nothing -- the MixinConfigs attribute must be explicit. ${file.jarVersion} in mods.toml
+// resolves at runtime from Implementation-Version.
+jar {
+    manifest {
+        attributes([
+            'MixinConfigs': 'ultimate_sleep.mixins.json',
+            'Implementation-Version': "${mod_version}+${minecraft_version}-forge"
+        ])
+    }
+}
+
+// Cog cell: compiled source is the materialized gen/ tree (scripts/cog-gen.ps1).
+sourceSets.main.java.srcDirs = ['gen/src/main/java']
+sourceSets.main.resources.srcDirs = ['src/main/resources', 'gen/src/main/resources']
+

@@ -1,0 +1,39 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version "${moddevgradle_version}"
+}
+
+repositories { mavenCentral() }
+
+version = "${mod_version}+${minecraft_version}-neoforge"
+group = 'com.kishku7'
+base { archivesName = 'ultimate-sleep' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+    runs {
+        client { client() }
+        server { server(); programArgument '--nogui' }
+    }
+    mods { ultimate_sleep { sourceSet(sourceSets.main) } }
+}
+
+dependencies {
+    // gson (shipped with MC) references these annotations; compile-time only (keeps -Xlint:all
+    // classfile warnings from firing on gson's class files).
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
+}
+
+processResources {
+    def ep = [mod_version: mod_version, neoforgeRange: project.neoforge_range, mcRange: project.mc_range]
+    inputs.properties(ep)
+    filesMatching('META-INF/neoforge.mods.toml') { expand(ep) }
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = 21; options.compilerArgs += ['-Xlint:all'] }
+
+// Cog cell: compiled source is the materialized gen/ tree (scripts/cog-gen.ps1).
+sourceSets.main.java.srcDirs = ['gen/src/main/java']
+sourceSets.main.resources.srcDirs = ['src/main/resources', 'gen/src/main/resources']

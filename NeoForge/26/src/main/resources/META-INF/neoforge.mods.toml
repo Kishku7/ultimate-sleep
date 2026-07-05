@@ -1,0 +1,24 @@
+license = "ARR"
+
+[[mods]]
+    modId = "ultimate_sleep"
+    version = "${mod_version}"
+    displayName = "Ultimate Sleep"
+    authors = "Kishku7"
+    description = '''An advanced, configurable sleep mod. Commands live under /usleep. Tracks AFK players, defers its /afk command to another mod when one already exists, and exposes an in-game admin panel driven by /usleep admin.'''
+
+[[mixins]]
+    config = "ultimate_sleep.mixins.json"
+
+[[dependencies.ultimate_sleep]]
+    modId = "neoforge"
+    type = "required"
+    versionRange = "${neoforgeRange}"
+    ordering = "NONE"
+    side = "BOTH"
+[[dependencies.ultimate_sleep]]
+    modId = "minecraft"
+    type = "required"
+    versionRange = "${mcRange}"
+    ordering = "NONE"
+    side = "BOTH"

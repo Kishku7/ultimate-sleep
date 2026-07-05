@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[50,)"
+license="ARR"
+
+[[mods]]
+modId="ultimate_sleep"
+version="${file.jarVersion}"
+displayName="Ultimate Sleep"
+authors="Kishku7"
+description='''An advanced, configurable sleep mod. Commands live under /usleep. Tracks AFK players, defers its /afk command to another mod when one already exists, and exposes an in-game admin panel driven by /usleep admin.'''
+
+[[dependencies.ultimate_sleep]]
+modId="forge"
+mandatory=true
+versionRange="[50,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.ultimate_sleep]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.5,1.21)"
+ordering="NONE"
+side="BOTH"

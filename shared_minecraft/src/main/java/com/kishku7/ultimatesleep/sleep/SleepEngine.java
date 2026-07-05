@@ -1,5 +1,7 @@
 package com.kishku7.ultimatesleep.sleep;
 
+import com.kishku7.ultimatesleep.compat.Era;
+
 import com.kishku7.ultimatesleep.UltimateSleep;
 import com.kishku7.ultimatesleep.config.Settings;
 import net.minecraft.network.chat.Component;
@@ -85,12 +87,11 @@ public final class SleepEngine {
     }
 
     private void setClockRate(MinecraftServer server, ServerLevel ow, float rate) {
-        ow.dimensionType().defaultClock().ifPresent(clock -> server.clockManager().setRate(clock, rate));
+        Era.setClockRate(server, ow, rate);
     }
 
     private void startAccelerate(MinecraftServer server, ServerLevel ow) {
-        long remaining = 24000L - (ow.getOverworldClockTime() % 24000L); // day-ticks to morning
-        if (remaining < 1) remaining = 1;
+        long remaining = Era.ticksToMorning(ow);
         double secs = speedSeconds(settings.string("accelerate_speed"));
         accelRate = (float) Math.max(1.0, remaining / (secs * 20.0));
         accelStartTick = server.getTickCount();
@@ -122,7 +123,7 @@ public final class SleepEngine {
     private void notifyWakeIfDue(MinecraftServer server) {
         if (!awaitingMorning) return;
         ServerLevel ow = server.overworld();
-        if (ow != null && !ow.isBrightOutside()) return; // not morning yet
+        if (ow != null && !Era.bright(ow)) return; // not morning yet
         awaitingMorning = false;
         if (settings.bool("notify_wake")) {
             server.getPlayerList().broadcastSystemMessage(Component.literal(
@@ -134,7 +135,8 @@ public final class SleepEngine {
     private void manageAcceleration(MinecraftServer server) {
         if (!accelerating) return;
         ServerLevel ow = server.overworld();
-        boolean day = ow == null || ow.isBrightOutside();
+        if (ow != null) Era.accelStep(server, ow, accelRate); // pre-26: advances dayTime; 26: no-op
+        boolean day = ow == null || Era.bright(ow);
         if (day) {
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                 if (p.isSleeping()) p.stopSleepInBed(false, true);

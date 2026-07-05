@@ -1,5 +1,7 @@
 package com.kishku7.ultimatesleep.sleep;
 
+import com.kishku7.ultimatesleep.compat.Era;
+
 import com.kishku7.ultimatesleep.UltimateSleep;
 import com.kishku7.ultimatesleep.config.Settings;
 import net.minecraft.network.chat.Component;
@@ -55,7 +57,7 @@ public final class VoteManager {
 
         // A new day clears all failed-vote lockouts.
         ServerLevel ow = server.overworld();
-        if (!lockedTonight.isEmpty() && (ow == null || ow.isBrightOutside())) {
+        if (!lockedTonight.isEmpty() && (ow == null || Era.bright(ow))) {
             lockedTonight.clear();
         }
 
@@ -143,7 +145,7 @@ public final class VoteManager {
             if (UltimateSleep.afk().isAfk(p.getUUID())) continue;
             if (lockedTonight.contains(p.getUUID())) continue;
             if (votes.containsKey(p.getUUID())) continue; // already voted
-            p.sendOverlayMessage(msg); // action bar (non-blocking)
+            Era.overlay(p, msg); // action bar (non-blocking)
         }
     }
 

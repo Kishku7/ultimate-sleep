@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.List;
 
 /**
- * Mod-driven night-skip control (Dave's policy, 2026-06-21): the playersSleepingPercentage
+ * Mod-driven night-skip control (design decision, 2026-06-21): the playersSleepingPercentage
  * gamerule is pinned to 101 and left there, so vanilla NEVER skips the night on its own (the
  * sleepers-needed count rounds to activePlayers+1, which is unreachable). The only thing that
  * advances the night is this mod, when its engine/vote logic explicitly asks for it.

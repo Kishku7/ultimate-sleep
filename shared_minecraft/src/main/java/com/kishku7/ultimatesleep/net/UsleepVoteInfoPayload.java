@@ -1,11 +1,12 @@
 package com.kishku7.ultimatesleep.net;
 
+import com.kishku7.ultimatesleep.compat.Era;
+
 import com.kishku7.ultimatesleep.UltimateSleep;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 
 /**
  * Server -> client: live vote tally + who's currently in bed, pushed about once a second while a
@@ -14,7 +15,7 @@ import net.minecraft.resources.Identifier;
 public record UsleepVoteInfoPayload(int yes, int no, String sleepers) implements CustomPacketPayload {
 
     public static final Type<UsleepVoteInfoPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(UltimateSleep.MOD_ID, "vote_info"));
+            new Type<>(Era.id("vote_info"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, UsleepVoteInfoPayload> CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, UsleepVoteInfoPayload::yes,

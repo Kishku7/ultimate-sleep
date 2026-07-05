@@ -1,5 +1,7 @@
 package com.kishku7.ultimatesleep.sleep;
 
+import com.kishku7.ultimatesleep.compat.Era;
+
 import com.kishku7.ultimatesleep.Platform;
 
 import com.google.gson.GsonBuilder;
@@ -69,7 +71,7 @@ public final class AutoSleepManager {
         if (!settings.bool("auto_sleep_enabled")) { wasBright = true; return; }
         ServerLevel ow = server.overworld();
         if (ow == null) return;
-        boolean bright = ow.isBrightOutside();
+        boolean bright = Era.bright(ow);
         if (wasBright && !bright) {
             duskPass(server, ow);
         }
@@ -84,7 +86,7 @@ public final class AutoSleepManager {
             BlockPos bed = findBed(ow, p);
             if (bed != null) {
                 p.startSleepInBed(bed).ifLeft(problem -> {
-                    Component m = problem.message();
+                    Component m = Era.problemMessage(problem);
                     if (m != null) p.sendSystemMessage(m);
                 });
                 continue;
@@ -113,9 +115,8 @@ public final class AutoSleepManager {
     /** Prefer the player's home (spawn) bed if it's a real bed within reach, else the nearest bed. */
     private BlockPos findBed(ServerLevel ow, ServerPlayer p) {
         BlockPos base = p.blockPosition();
-        var rc = p.getRespawnConfig();
-        if (rc != null && rc.respawnData() != null) {
-            GlobalPos gp = rc.respawnData().globalPos();
+        GlobalPos gp = Era.respawnGlobalPos(p);
+        {
             if (gp != null && ow.dimension().equals(gp.dimension())) {
                 BlockPos home = gp.pos();
                 if (inReach(base, home) && ow.getBlockState(home).getBlock() instanceof BedBlock) {

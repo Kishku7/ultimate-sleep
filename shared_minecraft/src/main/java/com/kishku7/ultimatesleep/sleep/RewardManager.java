@@ -1,5 +1,7 @@
 package com.kishku7.ultimatesleep.sleep;
 
+import com.kishku7.ultimatesleep.compat.Era;
+
 import com.kishku7.ultimatesleep.config.Settings;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -46,7 +48,7 @@ public final class RewardManager {
             if (!p.isSpectator() && p.isSleeping() && p.level() == ow) current.add(p.getUUID());
         }
 
-        boolean bright = ow.isBrightOutside();
+        boolean bright = Era.bright(ow);
         if (!wasBright && bright && anyRewardEnabled()) {
             for (UUID id : lastSleepers) {
                 ServerPlayer p = server.getPlayerList().getPlayer(id);
@@ -71,7 +73,7 @@ public final class RewardManager {
         if (settings.bool("reward_speed_boost")) {
             int dur = Math.max(1, settings.integer("reward_speed_boost_minutes")) * 60 * 20;
             int amp = Math.max(0, Math.round(settings.integer("reward_speed_boost_percent") / 20.0f) - 1);
-            p.addEffect(new MobEffectInstance(MobEffects.SPEED, dur, amp), null);
+            p.addEffect(Era.speedBoost(dur, amp), null);
         }
         if (settings.bool("reward_golden_carrot")) {
             ItemStack stack = new ItemStack(Items.GOLDEN_CARROT);

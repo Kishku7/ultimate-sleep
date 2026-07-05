@@ -1,0 +1,46 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version "${moddevgradle_version}"
+}
+
+repositories { mavenLocal(); maven { url = 'https://maven.neoforged.net/releases' }; mavenCentral() }
+
+version = "${mod_version}+${minecraft_version}-neoforge"
+group = 'com.kishku7'
+base { archivesName = 'ultimate-sleep' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+// Shared MC-coupled core (single source of truth) + MC-agnostic shared_common.
+sourceSets.main.java.srcDir "../../shared_minecraft/src/main/java"
+sourceSets.main.java.srcDir "../../shared_common/src/main/java"
+sourceSets.main.resources.srcDir "../../shared_minecraft/src/main/resources"
+sourceSets.main.resources.srcDir "../../shared_common/src/main/resources"
+
+neoForge {
+    version = project.neo_version
+    runs {
+        client { client() }
+        server { server(); programArgument '--nogui' }
+    }
+    mods { ultimate_sleep { sourceSet(sourceSets.main) } }
+}
+
+dependencies {
+    // gson (shipped with MC) references these annotations; compile-time only, keeps -Xlint:all
+    // classfile warnings from firing on gson's class files.
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
+}
+
+processResources {
+    def packFormat = (System.getenv("PACK_FORMAT") ?: "84")
+    def ep = [mod_version: mod_version, neoforgeRange: project.neoforge_range, mcRange: project.mc_range]
+    inputs.properties(ep + [packFormat: packFormat])
+    filesMatching('META-INF/neoforge.mods.toml') { expand(ep) }
+    // 26.x resource pack_format is > 81, so the strict datapack codec DEMANDS min_format/max_format;
+    // a plain int FATALs NeoForge dedicated-server datapack load. Ship the exact-single range form,
+    // value injected per 26.X by the build script (PACK_FORMAT env). See Memory/knowledge/pack-formats.md.
+    filesMatching('pack.mcmeta') { expand "packFormat": packFormat }
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.compilerArgs += ['-Xlint:all'] }

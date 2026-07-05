@@ -1,7 +1,7 @@
 # Ultimate Sleep -- Functional Spec
 
 Authoritative design document. Kept in-repo (mirrors trident-killers-4-java's convention).
-1.0 feature decisions locked with Dave 2026-06-20 (see PROPOSED_1.0.md for the original
+1.0 feature decisions locked 2026-06-20 (see PROPOSED_1.0.md for the original
 proposal + rationale). Update this as the build proceeds.
 
 ## 1. Goal
@@ -123,7 +123,7 @@ Somnia-style; perf-sensitive, hence the per-category scoping.
 
 Client GUI generated from the settings registry. On open: `/usleep query` (read settings
 + `/afk` owner) -> render controls grouped by category -> each change sends
-`/usleep admin set <key> <value>`. Deferred: NO GUI until every feature works via /usleep commands and the setting set is final (Dave 2026-06-20). Client GUI now exists (v0.16.0): opened via /usleep gui (server sends an open payload to modded clients), reads/writes over a back-channel (request/sync/set/roster payloads), server-permission-checked, command path remains the vanilla-client fallback.
+`/usleep admin set <key> <value>`. Deferred: NO GUI until every feature works via /usleep commands and the setting set is final (decision 2026-06-20). Client GUI now exists (v0.16.0): opened via /usleep gui (server sends an open payload to modded clients), reads/writes over a back-channel (request/sync/set/roster payloads), server-permission-checked, command path remains the vanilla-client fallback.
 
 ## 9. Auto-sleep (default ON) -- 1.0
 

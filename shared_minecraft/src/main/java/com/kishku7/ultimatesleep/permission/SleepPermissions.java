@@ -1,5 +1,7 @@
 package com.kishku7.ultimatesleep.permission;
 
+import com.kishku7.ultimatesleep.compat.Era;
+
 import com.kishku7.ultimatesleep.Platform;
 
 import com.google.gson.GsonBuilder;
@@ -7,7 +9,6 @@ import com.google.gson.reflect.TypeToken;
 import com.kishku7.ultimatesleep.UltimateSleep;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,12 +43,12 @@ public final class SleepPermissions {
 
     /** /usleep set tier: op 2 or sleep-admin. */
     public boolean canSet(CommandSourceStack src) {
-        return isSleepAdmin(src) || src.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+        return isSleepAdmin(src) || Era.hasGamemaster(src);
     }
 
     /** /usleep admin tier: op 3 or sleep-admin. */
     public boolean canAdmin(CommandSourceStack src) {
-        return isSleepAdmin(src) || src.permissions().hasPermission(Permissions.COMMANDS_ADMIN);
+        return isSleepAdmin(src) || Era.hasAdmin(src);
     }
 
     public boolean addAdmin(String name) {

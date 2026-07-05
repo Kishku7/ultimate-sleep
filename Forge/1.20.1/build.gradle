@@ -1,0 +1,52 @@
+plugins {
+    id 'eclipse'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'org.spongepowered.mixin' version '0.7.+'
+}
+
+version = "${mod_version}+${minecraft_version}-forge"
+group = 'com.kishku7'
+base { archivesName = 'ultimate-sleep' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+minecraft {
+    mappings channel: 'official', version: '1.20.1'
+    copyIdeResources = true
+}
+
+mixin {
+    add sourceSets.main, 'ultimate_sleep.refmap.json'
+    config 'ultimate_sleep.mixins.json'
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${forge_version}"
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    // gson (shipped with MC) references these annotations; compile-time only (silences
+    // -Xlint:all classfile warnings on gson's class files).
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+    // Documented Forge 1.20.1 exception (mod-rules): the Forge 47 patch deprecates
+    // BuiltInRegistries.ITEM/BLOCK (used by the shared TravelersBackpackCompat twin), so
+    // -deprecation is disabled on this cell only. -processing silences javac's 'no processor
+    // claimed @Mod/@Unique' notice, inherent to running the mixin AP.
+    options.compilerArgs += ['-Xlint:all,-deprecation,-processing']
+}
+
+// ${file.jarVersion} in mods.toml resolves at runtime from Implementation-Version. On this SRG
+// cell the mixin plugin wires the MixinConfigs manifest attribute itself at reobf time.
+jar {
+    manifest {
+        attributes 'Implementation-Version': "${mod_version}+${minecraft_version}-forge"
+    }
+}
+
+// Cog cell: compiled source is the materialized gen/ tree (scripts/cog-gen.ps1).
+sourceSets.main.java.srcDirs = ['gen/src/main/java']
+sourceSets.main.resources.srcDirs = ['src/main/resources', 'gen/src/main/resources']
+

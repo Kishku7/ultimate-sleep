@@ -1,11 +1,30 @@
 # Ultimate Sleep
 
-An advanced, all-in-one, fully admin-configurable sleep mod for Fabric. It folds the
-useful behaviors from ~180 surveyed Modrinth sleep mods (deduped to 52 distinct features)
-into a single mod where everything is a toggle. In singleplayer the player is the admin;
-on a server the controls are permission-gated. The mod is required on the **server only**
--- it works for vanilla clients via chat/commands, and adds an optional in-game panel for
-clients that also have it.
+The advanced, all-in-one, fully admin-configurable sleep mod. It folds the useful
+behaviors from ~180 surveyed Modrinth sleep mods (deduped to 52 distinct features) into a
+single mod where everything is a toggle. In singleplayer the player is the admin; on a
+server the controls are permission-gated. Ships for **Fabric, NeoForge, and Forge across
+Minecraft 1.20 through 26.x**. The mod is required on the **server only** -- it works for
+vanilla clients via chat/commands, and adds an optional in-game panel for clients that
+also have it.
+
+## Why Ultimate Sleep
+
+- **One mod instead of five.** Night-skip, sleep voting, auto-sleep, AFK handling, wake
+  rewards, sleep-rule overrides, and world progression -- every behavior you would
+  normally stack separate sleep mods for, in one place, each one a toggle.
+- **Predictable nights.** The mod owns every skip; vanilla can never skip the night on
+  its own, so the behavior you configure is the behavior you get.
+- **Zero client requirement.** Install it on the server and every player is fully served
+  -- vanilla clients get everything through chat and `/usleep` commands.
+- **Optional GUI for those who want it.** Players who also install the mod client-side
+  get an in-game control panel via `/usleep gui`.
+- **Delegate without op.** A designated sleep-admin can configure everything with no
+  operator level.
+
+## Download
+
+Get Ultimate Sleep on Modrinth: **https://modrinth.com/mod/ultimate-sleep**
 
 ---
 
@@ -26,7 +45,7 @@ The core. One setting, `requirement_mode`, picks how a night gets skipped.
   - Pass rules (`vote_pass_rule`): **MAJORITY_CAST** (yes > no), **PERCENT_CAST** (yes reaches
     `vote_pass_percentage` of votes cast), or **MAJORITY_NON_AFK** (majority of all non-AFK
     players -- the default).
-- **The mod owns every skip.** A server-side mixin gates vanilla's own sleep check so the game
+- **The mod owns every skip.** A server-side gate stops vanilla's own sleep check so the game
   can *never* skip the night on its own -- even if every player piles into bed. The night
   advances only when Ultimate Sleep decides it should, which keeps behavior predictable. The mod
   is also the sole voice -- vanilla's own "x/y sleeping" message is suppressed.
@@ -199,3 +218,19 @@ configuration without handing out vanilla operator.
   - `/usleep admin admins add <player>` -- grant sleep-admin to a player.
   - `/usleep admin admins remove <player>` -- revoke a player's sleep-admin.
   - `/usleep admin admins list` -- list the current sleep-admins.
+
+---
+
+## Source code
+
+The full multi-loader source (with build instructions) lives on the
+[`minecraft-1.20-26.3` branch](https://github.com/Kishku7/ultimate-sleep/tree/minecraft-1.20-26.3).
+
+## Report issues / Support
+
+Please file bug reports and feature requests at the shared support hub:
+**https://github.com/Kishku7/mod_support**
+
+## License
+
+All Rights Reserved (c) Kishku7.

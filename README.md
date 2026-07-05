@@ -4,7 +4,7 @@ The advanced, all-in-one, fully admin-configurable sleep mod. It folds the usefu
 behaviors from ~180 surveyed Modrinth sleep mods (deduped to 52 distinct features) into a
 single mod where everything is a toggle. In singleplayer the player is the admin; on a
 server the controls are permission-gated. Ships for **Fabric, NeoForge, and Forge across
-Minecraft 1.20 through 26.x**. The mod is required on the **server only** -- it works for
+Minecraft 1.20 through 26.x**, plus a native **Paper/Folia server plugin** for each major line. The mod is required on the **server only** -- it works for
 vanilla clients via chat/commands, and adds an optional in-game panel for clients that
 also have it.
 

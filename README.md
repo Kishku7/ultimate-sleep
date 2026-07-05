@@ -100,6 +100,19 @@ built against; the jar it produces claims the full range that build actually ser
 | `Forge/1.21.10` | 1.21.10 |
 | `Forge/1.21.11` | 1.21.11 |
 
+### Paper / Folia (server plugin line)
+
+| Cell | Jar covers |
+|---|---|
+| `Plugin/1.20.x` | Paper/Spigot/Folia 1.20.1 - 1.20.6 (api-version 1.20) |
+| `Plugin/1.21.x` | Paper/Spigot/Folia 1.21 - 1.21.11 (api-version 1.21) |
+| `Plugin/26.x` | Paper/Folia 26.1.x+ (api-version 26.1) |
+
+The plugin line is a Bukkit-native reimplementation of the sleep engine (no mixins, no NMS):
+three standalone cells share `Plugin/shared_plugin/` and each ships one jar covering
+Paper, Spigot, and Folia via a runtime platform facade. Build with `scripts/build-plugin.ps1`.
+Feature parity and the (small) list of mod-only features are documented in `Plugin/README.md`.
+
 **Known gaps (and why)**
 
 - **Forge 1.20.2 - 1.20.4** -- Forge 48 removed the legacy networking API these Forge

@@ -1,0 +1,31 @@
+# Changelog
+
+All notable changes to Ultimate Sleep are documented here. Format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [1.2.1]
+### Fixed
+- Resource pack metadata on Minecraft 1.21.9-1.21.11: Fabric and NeoForge builds no longer ship a
+  `pack.mcmeta` (each loader now synthesises the correct per-type metadata), and Forge builds carry the
+  correct data-pack format range. This stops the client from dropping the mod's resources on those versions.
+
+### Changed
+- 26.3 build updated to the current snapshot (26.3-snapshot-4).
+- Internal: consolidated to a single code source of truth across the build matrix (no shipped behaviour
+  change; the produced jars are byte-for-byte identical on unaffected versions).
+
+## [1.2.0]
+### Added
+- Full multi-loader, multi-version line: Fabric, NeoForge, and Forge across 1.20 - 26.x, plus
+  Paper/Folia plugin builds for 1.20.x / 1.21.x / 26.x.
+
+## [1.1.0]
+### Added
+- `notify_wake` "good morning" broadcast when a mod-driven skip reaches dawn.
+- Live sleeper/vote tally appended to the action-bar vote prompt (`show_sleepers_on_vote_screen`).
+
+## [1.0.0]
+### Added
+- Initial release: a single, fully admin-configurable sleep mod folding the useful behaviours of the
+  surveyed sleep-mod ecosystem into one mod where everything is a toggle. Server-required,
+  client-optional.

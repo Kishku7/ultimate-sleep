@@ -151,7 +151,13 @@ public final class TravelersBackpackCompat {
         level.setBlock(head, headState, Block.UPDATE_ALL);
 
         boolean[] ok = {true};
+        //[[[cog
+        //import sys; sys.path.insert(0, codegen); import compat
+        //for _l in compat.start_sleep_pre(ver, "        ", "level", "foot"): cog.outl(_l)
+        //cog.outl("        " + compat.start_sleep_call(ver, "p", "level", "foot") + ".ifLeft(problem -> ok[0] = false);")
+        //]]]
         p.startSleepInBed(foot).ifLeft(problem -> ok[0] = false);
+        //[[[end]]]
         if (!ok[0]) {
             remove(level, foot, head);
             return null;

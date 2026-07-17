@@ -12,10 +12,10 @@ base { archivesName = 'ultimate-sleep' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 // Shared MC-coupled core (single source of truth) + MC-agnostic shared_common.
-sourceSets.main.java.srcDir "../../shared_minecraft/src/main/java"
-sourceSets.main.java.srcDir "../../shared_common/src/main/java"
-sourceSets.main.resources.srcDir "../../shared_minecraft/src/main/resources"
-sourceSets.main.resources.srcDir "../../shared_common/src/main/resources"
+// Cog cell: compiled java is the materialized gen/ tree (scripts/cog-gen.ps1 -KeepCellResources);
+// this cell keeps its own pack.mcmeta/mixins.json/manifest, and gets shared lang from gen/ (D16).
+sourceSets.main.java.srcDirs = ['gen/src/main/java']
+sourceSets.main.resources.srcDirs = ['src/main/resources', 'gen/src/main/resources']
 
 neoForge {
     version = project.neo_version

@@ -6,7 +6,8 @@ param(
     [Parameter(Mandatory)][string]$Cell,
     [Parameter(Mandatory)][string]$McVer,
     [Parameter(Mandatory)][string]$Loader,
-    [string]$SrcLoader = ""
+    [string]$SrcLoader = "",
+    [switch]$KeepCellResources   # 26 line: emit java + lang from cog_sources, keep the cell's own pack.mcmeta/mixins.json/manifest
 )
 $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot -Parent
@@ -33,20 +34,19 @@ $packFormats = @{
   '1.21.9'='69'; '1.21.10'='69'; '1.21.11'='75'
 }
 $pf = $packFormats[$McVer]
-if (-not $pf) { throw "cog-gen: no pack_format for $McVer -- extend the table (knowledge/pack-formats.md)" }
+if (-not $pf -and -not $is26) { throw "cog-gen: no pack_format for $McVer -- extend the table (knowledge/pack-formats.md)" }
 
 Write-Host "[cog-gen] $Cell mc=$McVer loader=$Loader flavour=$flavour pf=$pf java17=$java17 modernNet=$modernNet"
 
-# 1. wipe + base copy (shared_minecraft + shared_common java)
+# 1. wipe + base copy: the ONE shared java source of truth is cog_sources/shared (invariants as plain
+#    files + the drift files as cog sources -- D16, shared_minecraft eliminated 2026-07-17). shared_common
+#    stays an optional plugin-only tree (absent here; guard kept for parity with the plugin-shipping mods).
 if (Test-Path $gen) { Remove-Item $gen -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $genJ, $genR | Out-Null
-robocopy (Join-Path $repo "shared_minecraft\src\main\java") $genJ /E /NJH /NJS /NDL /NC /NS /NP | Out-Null
+robocopy (Join-Path $srcs "shared") $genJ /E /NJH /NJS /NDL /NC /NS /NP | Out-Null
 if (Test-Path (Join-Path $repo "shared_common\src\main\java")) {
     robocopy (Join-Path $repo "shared_common\src\main\java") $genJ /E /NJH /NJS /NDL /NC /NS /NP | Out-Null
 }
-
-# 2. overwrite drift files with cog twins (shared flavour)
-robocopy (Join-Path $srcs "shared") $genJ /E /NJH /NJS /NDL /NC /NS /NP | Out-Null
 
 # 3. loader flavour (entrypoints, Platform, net registration, client wiring)
 $flavourDir = Join-Path $srcs $flavour
@@ -78,17 +78,32 @@ if (-not $modernNet) {
 }
 
 # 5. resources: shared lang + pack.mcmeta (range form REQUIRED for pf > 64)
-robocopy (Join-Path $repo "shared_minecraft\src\main\resources") $genR /E /NJH /NJS /NDL /NC /NS /NP | Out-Null
-if ([int]$pf -gt 81) {
-    # 26.x codec demands min_format/max_format (plain int FATALs Neo dedicated datapack load)
+robocopy (Join-Path $srcs "shared_resources") $genR /E /NJH /NJS /NDL /NC /NS /NP | Out-Null
+# D4 pack.mcmeta form by band (knowledge/pack-formats.md; RESOLVED 2026-07-12, mirrors lava-boats/BV):
+if ($KeepCellResources) {
+    # 26 line owns its own pack.mcmeta (range-form, per-26.X PACK_FORMAT) -- do not emit one here.
+} elseif ([int]$pf -gt 81) {
+    # 26.x (major >= 82): exact range-form. (26 cells are NOT cog-gen; kept for safety.)
     $mcmeta = '{"pack":{"description":"Ultimate Sleep","pack_format":' + $pf + ',"min_format":' + $pf + ',"max_format":' + $pf + '}}'
+    Set-Content (Join-Path $genR "pack.mcmeta") $mcmeta -NoNewline -Encoding ascii
 } elseif ([int]$pf -gt 64) {
-    # 1.21.9-1.21.11 codec (PackFormat.packCodec) wants pack_format + supported_formats
-    $mcmeta = '{"pack":{"description":"Ultimate Sleep","pack_format":' + $pf + ',"supported_formats":[' + $pf + ',' + $pf + ']}}'
+    # DEAD ZONE (resource major 65-81: 1.21.9/1.21.10=69, 1.21.11=75). Client resource codec and
+    # server data codec disagree -> Fabric + NeoForge ship NO pack.mcmeta (loader synthesises correct
+    # per-type metadata); Forge ships the exact range on the DATA major (both codecs new-era).
+    if ($Loader -eq 'forge') {
+        $dataMajors = @{ '1.21.9'='88'; '1.21.10'='88'; '1.21.11'='94' }
+        $dm = $dataMajors[$McVer]
+        if (-not $dm) { throw "cog-gen: no dead-zone data-major for $McVer (knowledge/pack-formats.md)" }
+        $mcmeta = '{"pack":{"description":"Ultimate Sleep","pack_format":' + $dm + ',"min_format":' + $dm + ',"max_format":' + $dm + '}}'
+        Set-Content (Join-Path $genR "pack.mcmeta") $mcmeta -NoNewline -Encoding ascii
+    } else {
+        Remove-Item (Join-Path $genR "pack.mcmeta") -Force -ErrorAction SilentlyContinue
+    }
 } else {
+    # <= 1.21.8 (major <= 64): plain int.
     $mcmeta = '{"pack":{"description":"Ultimate Sleep","pack_format":' + $pf + '}}'
+    Set-Content (Join-Path $genR "pack.mcmeta") $mcmeta -NoNewline -Encoding ascii
 }
-Set-Content (Join-Path $genR "pack.mcmeta") $mcmeta -NoNewline -Encoding ascii
 
 # 6. mixins.json (8 shared mixins every era; forge adds ForgeSleepMonstersMixin -- the NOT_SAFE
 #    monsters override that Fabric/NeoForge do via sleep events Forge does not have).
@@ -129,7 +144,7 @@ $refmapLine  "mixins": [
   }
 }
 "@
-Set-Content (Join-Path $genR "ultimate_sleep.mixins.json") $mixinsJson -Encoding ascii
+if (-not $KeepCellResources) { Set-Content (Join-Path $genR "ultimate_sleep.mixins.json") $mixinsJson -Encoding ascii }
 
 # 7. run cogapp on every gen file carrying a cog marker
 $cgFwd = $cg -replace '\\','/'

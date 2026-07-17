@@ -49,6 +49,8 @@ foreach ($v in $matrix.Keys) {
     if (-not (Want $v)) { continue }
     $m = $matrix[$v]
     Write-Host "=== US NeoForge $v (mc=$($m.mc), neo=$($m.neo)) ==="
+    & (Join-Path $PSScriptRoot "cog-gen.ps1") -Cell "NeoForge\26" -McVer $m.mc -Loader neoforge -KeepCellResources
+    if ($LASTEXITCODE -ne 0) { Add-Content $status "FAIL cog $v"; throw "cog-gen FAILED 26 $v" }
     $env:PACK_FORMAT = $m.pf
     Push-Location $cell26
     & ".\gradlew.bat" clean build "-Pminecraft_version=$($m.mc)" "-Pneo_version=$($m.neo)" "-Pneoforge_range=$($m.neoRange)" "-Pmc_range=$($m.mcRange)" --no-daemon

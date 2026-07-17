@@ -142,3 +142,20 @@ if __name__ == "__main__":
         print("%-8s id=%-40s bright=%-5s sl2=%-5s respawn=%s perms=%-5s anchor=%s" % (
             ver, make_id(ver, "NS", "P"), has_bright(ver), sl2(ver), respawn_era(ver),
             renamed(ver), "clock" if is26(ver) else "setDayTime"))
+
+# --- snap-4 (26.3) startSleepInBed 4-arg overload: startSleepInBed(AbstractBedBlock, BlockState, BedRule, BlockPos)
+#     (26.2 and 26.3-snapshot-2 were still 1-arg (BlockPos); vanilla builds the args as below). ---
+def bed_env4(v):    return _vt(v) >= (26, 3)
+
+def start_sleep_pre(v, indent, level, pos):
+    if bed_env4(v):
+        return [
+            indent + "net.minecraft.world.level.block.state.BlockState uSleepBs = %s.getBlockState(%s);" % (level, pos),
+            indent + "net.minecraft.world.level.block.AbstractBedBlock uSleepBed = (net.minecraft.world.level.block.AbstractBedBlock) uSleepBs.getBlock();",
+        ]
+    return []
+
+def start_sleep_call(v, player, level, pos):
+    if bed_env4(v):
+        return "%s.startSleepInBed(uSleepBed, uSleepBs, uSleepBed.getBedRule(%s, %s), %s)" % (player, level, pos, pos)
+    return "%s.startSleepInBed(%s)" % (player, pos)

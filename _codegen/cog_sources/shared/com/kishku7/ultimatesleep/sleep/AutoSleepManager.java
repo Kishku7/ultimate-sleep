@@ -85,7 +85,13 @@ public final class AutoSleepManager {
 
             BlockPos bed = findBed(ow, p);
             if (bed != null) {
+                //[[[cog
+                //import sys; sys.path.insert(0, codegen); import compat
+                //for _l in compat.start_sleep_pre(ver, "                ", "ow", "bed"): cog.outl(_l)
+                //cog.outl("                " + compat.start_sleep_call(ver, "p", "ow", "bed") + ".ifLeft(problem -> {")
+                //]]]
                 p.startSleepInBed(bed).ifLeft(problem -> {
+                //[[[end]]]
                     Component m = Era.problemMessage(problem);
                     if (m != null) p.sendSystemMessage(m);
                 });

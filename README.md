@@ -18,7 +18,7 @@ shared codebase.
 | JDK 17 (Eclipse Adoptium) | Forge 1.20.1 cell |
 | JDK 21 (Eclipse Adoptium) | All other pre-26 cells (Fabric daemon, Forge 1.20.6-1.21.11, NeoForge pre-26) |
 | JDK 25 | The 26-line cells (Fabric/26, NeoForge/26) -- run on the system JDK |
-| Python 3 + Cog (`pip install cogapp`) | Code generation (`_codegen/`) -- required before any pre-26 cell builds |
+| Python 3 + Cog (`pip install cogapp`) | Code generation (`_codegen/`) -- required before ANY cell builds (pre-26 and the 26 line) |
 | PowerShell 7 (`pwsh`) | The build scripts in `scripts/` |
 
 Each pre-26 cell pins its own JVM via `org.gradle.java.home` in its `gradle.properties`
@@ -150,8 +150,8 @@ minecraft-1.20-26.3/
   Fabric/<cell>/        one Gradle project per Fabric build cell (+ Fabric/26 line cell)
   NeoForge/<cell>/      one Gradle project per NeoForge build cell (+ NeoForge/26 line cell)
   Forge/<cell>/         one Gradle project per Forge build cell
-  shared_common/        loader- and version-independent engine code (compiled into every cell)
-  shared_minecraft/     plain 26-era copies of the MC-facing shared classes (the "plain twins")
+
+  _codegen/cog_sources/ SINGLE java source of truth: shared/ (MC-facing) + <loader>/ (flavour) + shared_pre26/ (pre-26 GUI) + shared_resources/ (lang)
   _codegen/             the code-generation machinery
     compat.py           the era brain: version predicates + per-version constants
     compat_loaders.py   loader-flavour rules
@@ -179,12 +179,12 @@ mixin environments), so the MC-facing sources are maintained once as **cog twins
    `*_legacy_net/` flavours cover the pre-modern networking era.
 4. **Era file presence.** `cog-gen.ps1` also decides which files exist at all for a given
    version, emits the per-version `pack.mcmeta`, and writes the cell's `mixins.json`
-   (compatibility level + refmap wiring) into the cell's `gen/` tree. Cells compile
-   `gen/` + `shared_common/`; nothing generated is hand-edited.
-5. **Drift protection.** The 26-era cells compile the plain copies in `shared_minecraft/`
-   directly. `check-sync.ps1` materializes every cog twin at 26.1 and diffs it against its
-   plain twin, so the two representations cannot drift apart silently. It must pass before
-   any push.
+   (compatibility level + refmap wiring) into the cell's `gen/` tree. EVERY cell (pre-26 + 26) compiles
+   its materialized `gen/` tree; nothing generated is hand-edited.
+5. **One source of truth (D16, 2026-07-17).** All shared and per-loader java lives once under
+   `_codegen/cog_sources/`; there are no `shared_minecraft` plain twins and no drift tripwire to run.
+   The 26-line cells build from `gen/` via `cog-gen.ps1 -KeepCellResources`, keeping only their own
+   `pack.mcmeta` / `mixins.json` / loader manifest.
 
 ## License
 

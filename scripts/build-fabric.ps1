@@ -40,22 +40,24 @@ foreach ($c in $cells) {
 # ---- 26 line (one cell, rebuilt per 26.X with -P overrides + PACK_FORMAT) ----
 $cell26 = Join-Path $fabric "26"
 $matrix = [ordered]@{
-  "26.1" = @{ mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; lo="26.1-"; hi="26.2"; pf="84" }
-  "26.2" = @{ mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; lo="26.2-"; hi="26.3"; pf="88" }
-  "26.3" = @{ mc="26.3-snapshot-2"; api="0.153.1+26.3";   loader="0.19.3"; lo="26.3-"; hi="26.4"; pf="90" }
+  "26.1" = @{ mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; lo="26.1-"; hi="26.2"; pf="84"; modver="1.2.0" }
+  "26.2" = @{ mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; lo="26.2-"; hi="26.3"; pf="88"; modver="1.2.0" }
+  "26.3" = @{ mc="26.3-snapshot-4"; api="0.155.1+26.3";   loader="0.19.3"; lo="26.3-alpha.4"; hi="26.4"; pf="92"; modver="1.2.1" }
 }
 $modver = (Select-String -Path (Join-Path $cell26 "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
 foreach ($v in $matrix.Keys) {
     if (-not (Want $v)) { continue }
     $m = $matrix[$v]
     Write-Host "=== US Fabric $v (mc=$($m.mc)) ==="
+    & (Join-Path $PSScriptRoot "cog-gen.ps1") -Cell "Fabric\26" -McVer $m.mc -Loader fabric -KeepCellResources
+    if ($LASTEXITCODE -ne 0) { Add-Content $status "FAIL cog $v"; throw "cog-gen FAILED 26 $v" }
     $env:PACK_FORMAT = $m.pf
     Push-Location $cell26
-    & ".\gradlew.bat" clean build "-Pminecraft_version=$($m.mc)" "-Pfabric_api_version=$($m.api)" "-Ploader_version=$($m.loader)" "-Pmc_lower=$($m.lo)" "-Pmc_upper=$($m.hi)" --no-daemon
+    & ".\gradlew.bat" clean build "-Pmod_version=$($m.modver)" "-Pminecraft_version=$($m.mc)" "-Pfabric_api_version=$($m.api)" "-Ploader_version=$($m.loader)" "-Pmc_lower=$($m.lo)" "-Pmc_upper=$($m.hi)" --no-daemon
     $rc = $LASTEXITCODE; Pop-Location
     Remove-Item Env:\PACK_FORMAT -ErrorAction SilentlyContinue
     if ($rc -ne 0) { Add-Content $status "FAIL $v"; throw "Fabric FAILED $v" }
-    Copy-Item (Jar $cell26).FullName (Join-Path $dist ("ultimate-sleep-{0}+{1}-fabric.jar" -f $modver, $v)) -Force
+    Copy-Item (Jar $cell26).FullName (Join-Path $dist ("ultimate-sleep-{0}+{1}-fabric.jar" -f $m.modver, $v)) -Force
     Add-Content $status "PASS $v"
     Write-Host "  -> $v done"
 }

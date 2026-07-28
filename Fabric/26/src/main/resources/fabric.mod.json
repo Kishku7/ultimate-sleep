@@ -17,6 +17,9 @@
       "com.kishku7.ultimatesleep.client.UltimateSleepClient"
     ]
   },
+  "contact": {
+    "issues": "https://github.com/Kishku7/mod_support/issues"
+  },
   "mixins": [
     "ultimate_sleep.mixins.json"
   ],

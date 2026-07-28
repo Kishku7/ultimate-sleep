@@ -3,6 +3,38 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.4] - 2026-07-28
+
+### Changed
+- **Fabric 26.3 cell moved to MC 26.3-snapshot-6** (from snapshot-5): fabric-api
+  `0.155.3+26.3` -> `0.156.1+26.3`, `pack_format` `93` -> `94`, dep floor `26.3-alpha.5` ->
+  `26.3-alpha.6` (upper bound stays `26.4`). Only this cell changed; the rest of the matrix
+  stays 1.2.0/1.2.1.
+
+### Notes
+- **No source change required**, but two snapshot-6 deltas land close to this mod and were
+  checked against the decompiled source rather than assumed:
+  - `AbstractFurnaceBlockEntity` lost `getLootContext` / `getProvidedInteger` /
+    `getProvidedFloat` (moved up to `BaseContainerBlockEntity` + the new `ResolvableNumber`).
+    `FurnaceProgressionMixin` targets **`serverTick(ServerLevel, BlockPos, BlockState,
+    AbstractFurnaceBlockEntity)`**, whose signature is byte-for-byte unchanged at snapshot-6,
+    so the mixin target still resolves.
+  - `Player.startSleepInBed(AbstractBedBlock, BlockState, BedRule, BlockPos)` keeps its
+    signature; only its BODY changed (it now returns `Either.left(OTHER_PROBLEM)` when the
+    new `LivingEntity.startSleeping` returns false). The cog-gated 4-arg call from snapshot-4
+    still compiles. **Behavioural watch item:** a bed-entry that previously always succeeded
+    can now report a problem, so auto-sleep failure paths deserve an in-game look.
+  - Commands use the static `SharedSuggestionProvider.suggest(...)`, which is unchanged --
+    the new `Predicate` filter was added to `suggestRegistryElements`/`listSuggestions`.
+
+### Fixed
+- **The Fabric 26 manifest was missing `contact.issues`** -- Ultimate Sleep was the only mod
+  shipping no issue-tracker link, so the pre-publish metadata gate failed it. Added the
+  canonical `https://github.com/Kishku7/mod_support/issues` to the 26 cell (the cell being
+  shipped). NOTE: the other 7 Fabric cells and the NeoForge/Forge/plugin manifests still lack
+  it -- a mod-wide backfill is owed on the next full-matrix pass, since fixing them now would
+  mean rebuilding and republishing otherwise byte-identical jars.
+
 ## [1.2.3] - 2026-07-27
 ### Changed
 - NeoForge 26 cells rebuilt against the now-PUBLISHED NeoForge builds: 26.1 -> 26.1.2.87, 26.2 -> 26.2.0.35-beta (previously 26.1.2.77 / 26.2.0.8-beta).

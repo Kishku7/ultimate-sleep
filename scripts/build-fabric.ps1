@@ -42,7 +42,7 @@ $cell26 = Join-Path $fabric "26"
 $matrix = [ordered]@{
   "26.1" = @{ mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; lo="26.1-"; hi="26.2"; pf="84"; modver="1.2.0" }
   "26.2" = @{ mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; lo="26.2-"; hi="26.3"; pf="88"; modver="1.2.0" }
-  "26.3" = @{ mc="26.3-snapshot-5"; api="0.155.3+26.3";   loader="0.19.3"; lo="26.3-alpha.5"; hi="26.4"; pf="93"; modver="1.2.2" }
+  "26.3" = @{ mc="26.3-snapshot-6"; api="0.156.1+26.3";   loader="0.19.3"; lo="26.3-alpha.6"; hi="26.4"; pf="94"; modver="1.2.4" }
 }
 $modver = (Select-String -Path (Join-Path $cell26 "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
 foreach ($v in $matrix.Keys) {

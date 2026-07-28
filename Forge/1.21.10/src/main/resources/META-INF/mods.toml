@@ -2,6 +2,8 @@ modLoader="javafml"
 loaderVersion="[60,)"
 license="ARR"
 
+issueTrackerURL="https://github.com/Kishku7/mod_support/issues"
+
 [[mods]]
 modId="ultimate_sleep"
 version="${file.jarVersion}"

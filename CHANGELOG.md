@@ -3,6 +3,30 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.5] - 2026-07-28
+
+### Fixed
+- **Issue-tracker URL backfilled across the WHOLE matrix.** 1.2.4 added `contact.issues` to the
+  Fabric 26 cell only; every other manifest still shipped none, so Ultimate Sleep was the one
+  mod whose jars carried no way to report a bug. All 24 remaining manifests now carry the
+  canonical `https://github.com/Kishku7/mod_support/issues`:
+  - 7 Fabric cells (1.20.1, 1.20.6, 1.21.1, 1.21.2, 1.21.5, 1.21.9, 1.21.11) -- `contact.issues`
+  - 9 Forge cells (1.20.1, 1.20.6, 1.21.1, 1.21.4, 1.21.5, 1.21.7, 1.21.8, 1.21.10, 1.21.11)
+    -- top-level `issueTrackerURL`
+  - 8 NeoForge cells (1.20.6, 1.21.1, 1.21.2, 1.21.5, 1.21.8, 1.21.9, 1.21.11, 26) -- same
+  Every cell was REBUILT so the shipped binaries actually carry it, and all 28 jars were
+  verified by reading the manifest back out of the jar (0 without the URL).
+
+### Changed
+- Mod-wide version 1.2.4 -> **1.2.5**. Per the versioning rule every rebuilt-and-shipped binary
+  gets a bump, and here every cell changed, so this is a full-matrix release rather than the
+  usual targeted one.
+
+### Notes
+- The Bukkit `plugin.yml` is unchanged: Bukkit has no issue-tracker field, and its `website`
+  already points at the mod's repo. The plugin jar therefore keeps its own version line (1.2.0)
+  and was not rebuilt for this.
+
 ## [1.2.4] - 2026-07-28
 
 ### Changed

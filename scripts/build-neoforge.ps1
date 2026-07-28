@@ -41,8 +41,8 @@ foreach ($c in $cells) {
 # ---- 26 line (one cell, rebuilt per 26.X with -P overrides + PACK_FORMAT) ----
 $cell26 = Join-Path $neo "26"
 $matrix = [ordered]@{
-  "26.1" = @{ mc="26.1.2"; neo="26.1.2.77";     neoRange="[26.1,)";           mcRange="[26.1,26.2)"; pf="84" }
-  "26.2" = @{ mc="26.2";   neo="26.2.0.8-beta"; neoRange="[26.2.0.0-beta,)";  mcRange="[26.2,26.3)"; pf="88" }
+  "26.1" = @{ mc="26.1.2"; neo="26.1.2.87";     neoRange="[26.1,)";           mcRange="[26.1,26.2)"; pf="84" }
+  "26.2" = @{ mc="26.2";   neo="26.2.0.35-beta"; neoRange="[26.2.0.0-beta,)";  mcRange="[26.2,26.3)"; pf="88" }
 }
 $modver = (Select-String -Path (Join-Path $cell26 "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
 foreach ($v in $matrix.Keys) {

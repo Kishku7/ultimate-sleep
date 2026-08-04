@@ -47,8 +47,9 @@ Supporting scripts:
 - `scripts\cog-gen.ps1 -Cell Fabric\1.21.11 -McVer 1.21.11 -Loader fabric` -- materialize
   one cell's `gen/` tree by hand. The build scripts call this automatically; you only need
   it directly when iterating on `_codegen/` sources.
-- `scripts\check-sync.ps1` -- the cog-twin vs plain-twin drift tripwire (exit 1 on drift).
-  Run before every push.
+- `scripts\dist-prune.ps1` -- drops superseded jars from `dist/` so it only ever holds the
+  CURRENT mod version. The three mod build scripts call it on entry; run it by hand with
+  `-WhatIfOnly` to see what would go. Paper/Folia plugin jars are exempt (own version line).
 
 The 26-line cells (`Fabric/26`, `NeoForge/26`) are single projects rebuilt once per 26.x
 release line with `-P` property overrides and a `PACK_FORMAT` environment variable; the
@@ -158,7 +159,7 @@ minecraft-1.20-26.3/
     cog_sources/        the cog twins, by flavour: shared/, shared_pre26/, fabric/,
                         fabric_legacy_net/, forge/, forge_legacy_net/, neoforge/
   scripts/              build-fabric.ps1, build-neoforge.ps1, build-forge.ps1,
-                        cog-gen.ps1, check-sync.ps1
+                        build-plugin.ps1, cog-gen.ps1, dist-prune.ps1
   dist/                 build output (final per-cell jars land here)
   research/             design research notes
 ```

@@ -3,6 +3,48 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.6] - 2026-08-03 (full matrix)
+
+### Fixed
+- **`sleep_anytime` let you into the bed and then threw you straight back out**
+  ([mod_support #10](https://github.com/Kishku7/mod_support/issues/10)). Vanilla gates sleeping in
+  TWO places, and only one was ever bypassed: the ENTRY check inside `ServerPlayer.startSleepInBed`
+  (covered by `ServerPlayerSleepMixin` / the loader sleep events), and an ONGOING check inside
+  `Player.tick` that runs every tick while asleep and calls `stopSleepInBed(false, true)` the moment
+  the day-gate says you may not sleep here. Nothing in the mod touched the second one, so with
+  `sleep_anytime` enabled you passed the entry check, entered the bed, and were ejected on the very
+  next tick -- and because you never stayed asleep, `areEnoughSleeping` never flipped, the skip never
+  triggered, and no progression (crops/animals/smelting/despawn) ran either.
+  New `PlayerSleepTickMixin` redirects that `stopSleepInBed` call inside `Player.tick` and skips it
+  while `sleep_anytime` is on. Dawn wake-up is unaffected (that runs through
+  `ServerLevel.wakeUpAllPlayers`, a different call site).
+  **This was never Fabric-only:** NeoForge relies on `CanPlayerSleepEvent`, which likewise fires only
+  at entry, so `sleep_anytime` was broken on NeoForge on EVERY version. Forge was already fine (its
+  `Player.tick` patch fires `SleepingTimeCheckEvent` there) and so was Fabric below 1.21.11
+  (fabric-api hooks the tick site); the new mixin is inert where the gate is already handled.
+- **`afk_threshold_seconds = -1` did not actually disable auto-AFK detection.** `AfkManager.tick()`
+  ran the raw value through `Math.max(1, ...)`, flooring any zero/negative value to a 1-second
+  threshold -- the opposite of "off". Auto-AFK detection is now genuinely skipped when the
+  threshold is negative (manual `/usleep afk` still works); if the setting is switched to -1
+  mid-session, any player already auto-AFK is immediately cleared.
+
+### Added
+- **Admin GUI: "Auto-AFK Detection" ON/OFF button**, on its own row directly above the
+  `afk_threshold_seconds` field (Auto-sleep & AFK page). OFF sets the threshold to -1; clicking
+  again restores 180s. Landed in both the 26.x (`extractRenderState`) and pre-26 (`render`)
+  `UltimateSleepScreen` copies.
+
+### Notes
+- Rebuilt across the WHOLE matrix at one version. The AFK fix above had been built for the
+  Fabric 1.21.11 cell only (2026-07-31, never released); it ships everywhere here.
+- `PlayerSleepTickMixin` needs no era gate: the gate EXPRESSION drifts (`Level.isDay` 1.20-1.21.4,
+  `Level.isBrightOutside` 1.21.5-1.21.8, `BedRule.canSleep` via `environmentAttributes`
+  1.21.11-26.2, `AbstractBedBlock.getBedRule().canSleep` 26.3+), but the `stopSleepInBed(ZZ)V` call
+  it guards is descriptor-identical with a single call site in `tick` on every version from 1.20.1
+  to 26.3-snapshot-6. Redirecting the consequence rather than the condition also avoids the
+  equal-priority collision with fabric-api's `ALLOW_SLEEP_TIME` redirect (see the 2026-07-05
+  smoketest note in `ServerPlayerSleepMixin`).
+- The Paper/Folia plugin is unchanged and keeps its own 1.2.0 line (no mixins, different sleep path).
 ## [1.2.5] - 2026-07-28
 
 ### Fixed

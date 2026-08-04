@@ -38,7 +38,7 @@ public final class UltimateSleepScreen extends Screen {
                     "reward_speed_boost", "reward_speed_boost_percent", "reward_speed_boost_minutes"},
             {"world_progression_enabled", "progress_crops", "progress_animal_husbandry",
                     "progress_smelting", "progress_despawn_timers"},
-            {"auto_sleep_enabled", "afk_threshold_seconds", "provide_afk_command"},
+            {"auto_sleep_enabled", "afk_disable_toggle", "afk_threshold_seconds", "provide_afk_command"},
             {}
     };
     private static final int VOTING_PAGE = 2;
@@ -138,6 +138,10 @@ public final class UltimateSleepScreen extends Screen {
             buildSpeedButtons(y);
             return;
         }
+        if (key.equals("afk_disable_toggle")) {
+            buildAfkDisableToggle(labelX, ctrlX, y, ctrlW);
+            return;
+        }
         addRenderableWidget(new StringWidget(labelX, y + 4, ctrlX - labelX - 4, 12,
                 Component.literal(pretty(key)), this.font));
         String val = ClientState.values.getOrDefault(key, "");
@@ -169,6 +173,25 @@ public final class UltimateSleepScreen extends Screen {
             pageEdits.put(key, eb);
             addRenderableWidget(eb);
         }
+    }
+
+    /**
+     * Outright off/on switch for auto-AFK detection, shown directly above the threshold field.
+     * OFF sets afk_threshold_seconds to -1 (disabled); clicking again while off restores a sane
+     * default (180s) rather than leaving the raw field to be hand-edited back on.
+     */
+    private void buildAfkDisableToggle(int labelX, int ctrlX, int y, int ctrlW) {
+        addRenderableWidget(new StringWidget(labelX, y + 4, ctrlX - labelX - 4, 12,
+                Component.literal("Auto-AFK Detection"), this.font));
+        String val = ClientState.values.getOrDefault("afk_threshold_seconds", "180");
+        boolean disabled;
+        try { disabled = Integer.parseInt(val) < 0; } catch (NumberFormatException ex) { disabled = false; }
+        final boolean isDisabled = disabled;
+        ThemedButton b = new ThemedButton(ctrlX, y, ctrlW, 20, Component.literal(isDisabled ? "OFF" : "ON"),
+                () -> send("afk_threshold_seconds", isDisabled ? "180" : "-1"));
+        b.textColor = isDisabled ? 0xFF9A9A9A : 0xFF54FB54;
+        b.active = ClientState.canSet;
+        addRenderableWidget(b);
     }
 
     /** The four named ACCELERATE speeds as a row of buttons; active highlighted, all grey if OFF. */

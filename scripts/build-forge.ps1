@@ -9,6 +9,7 @@ $forge = Join-Path $repo "Forge"
 $dist  = Join-Path $repo "dist"
 $status = Join-Path $env:TEMP "usleep_forge_status.txt"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
+& (Join-Path $PSScriptRoot "dist-prune.ps1")   # keep dist/ at the current version only
 Remove-Item $status -ErrorAction SilentlyContinue
 
 function Want([string]$key) { return (-not $Only -or $Only.Count -eq 0 -or $Only -contains $key) }

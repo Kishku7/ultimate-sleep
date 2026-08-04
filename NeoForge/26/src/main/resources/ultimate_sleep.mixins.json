@@ -10,7 +10,8 @@
     "ServerLevelProgressionMixin",
     "FurnaceProgressionMixin",
     "AgeableMobProgressionMixin",
-    "ItemEntityProgressionMixin"
+    "ItemEntityProgressionMixin",
+    "PlayerSleepTickMixin"
   ],
   "injectors": {
     "defaultRequire": 1

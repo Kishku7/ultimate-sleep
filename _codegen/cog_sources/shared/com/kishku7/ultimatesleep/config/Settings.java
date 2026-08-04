@@ -93,7 +93,7 @@ public final class Settings {
         // auto-sleep
         reg("auto_sleep_enabled", Type.BOOL, true, "Allow players to opt into auto-sleep at dusk.");
         // afk
-        reg("afk_threshold_seconds", Type.INT, 180, "Idle time before auto-AFK.");
+        reg("afk_threshold_seconds", Type.INT, 180, "Idle time before auto-AFK (-1 disables auto-AFK detection).");
         reg("provide_afk_command", Type.BOOL, true, "Register /afk alias when none exists.");
     }
 

@@ -137,7 +137,8 @@ $refmapLine  "mixins": [
     "ServerLevelProgressionMixin",
     "FurnaceProgressionMixin",
     "AgeableMobProgressionMixin",
-    "ItemEntityProgressionMixin"$forgeMixins
+    "ItemEntityProgressionMixin",
+    "PlayerSleepTickMixin"$forgeMixins
   ],
   "injectors": {
     "defaultRequire": 1

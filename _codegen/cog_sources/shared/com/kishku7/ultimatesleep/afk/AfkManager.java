@@ -48,7 +48,10 @@ public final class AfkManager {
         if (!settings.bool("enabled")) return;
 
         final int now = server.getTickCount();
-        final int thresholdTicks = Math.max(1, settings.integer("afk_threshold_seconds")) * 20;
+        final int rawThreshold = settings.integer("afk_threshold_seconds");
+        // -1 = auto-AFK detection disabled entirely (manual /usleep afk still works).
+        final boolean autoAfkDisabled = rawThreshold < 0;
+        final int thresholdTicks = autoAfkDisabled ? 0 : Math.max(1, rawThreshold) * 20;
 
         Set<UUID> online = new HashSet<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
@@ -64,6 +67,9 @@ public final class AfkManager {
                     snapshot(s, p, now);
                     s.auto = false;
                     s.manual = false;
+                } else if (autoAfkDisabled) {
+                    // Detection turned off mid-session: drop any existing auto-AFK immediately.
+                    if (s.auto) s.auto = false;
                 } else if (!s.manual && (now - s.lastActiveTick) >= thresholdTicks) {
                     s.auto = true;
                 }

@@ -8,6 +8,7 @@ $fabric = Join-Path $repo "Fabric"
 $dist   = Join-Path $repo "dist"
 $status = Join-Path $env:TEMP "usleep_fabric_status.txt"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
+& (Join-Path $PSScriptRoot "dist-prune.ps1")   # keep dist/ at the current version only
 Remove-Item $status -ErrorAction SilentlyContinue
 
 function Want([string]$key) { return (-not $Only -or $Only.Count -eq 0 -or $Only -contains $key) }
@@ -40,9 +41,9 @@ foreach ($c in $cells) {
 # ---- 26 line (one cell, rebuilt per 26.X with -P overrides + PACK_FORMAT) ----
 $cell26 = Join-Path $fabric "26"
 $matrix = [ordered]@{
-  "26.1" = @{ mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; lo="26.1-"; hi="26.2"; pf="84"; modver="1.2.5" }
-  "26.2" = @{ mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; lo="26.2-"; hi="26.3"; pf="88"; modver="1.2.5" }
-  "26.3" = @{ mc="26.3-snapshot-6"; api="0.156.1+26.3";   loader="0.19.3"; lo="26.3-alpha.6"; hi="26.4"; pf="94"; modver="1.2.5" }
+  "26.1" = @{ mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; lo="26.1-"; hi="26.2"; pf="84"; modver="1.2.6" }
+  "26.2" = @{ mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; lo="26.2-"; hi="26.3"; pf="88"; modver="1.2.6" }
+  "26.3" = @{ mc="26.3-snapshot-6"; api="0.156.1+26.3";   loader="0.19.3"; lo="26.3-alpha.6"; hi="26.4"; pf="94"; modver="1.2.6" }
 }
 $modver = (Select-String -Path (Join-Path $cell26 "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
 foreach ($v in $matrix.Keys) {

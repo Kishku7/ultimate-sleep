@@ -78,7 +78,18 @@ public final class RewardManager {
         if (settings.bool("reward_golden_carrot")) {
             ItemStack stack = new ItemStack(Items.GOLDEN_CARROT);
             if (!p.getInventory().add(stack)) {
+                //[[[cog
+                //import sys; sys.path.insert(0, codegen); import compat
+                //if compat.drop_pred(ver):
+                //    cog.outl("// 26.3-snapshot-7+: drop() takes a trailing Prediction. PREDICTED is what")
+                //    cog.outl("// vanilla passes for overflow reached from a player action; it only selects")
+                //    cog.outl("// the swing broadcast -- the item entity spawns either way.")
+                //    cog.outl("p.drop(stack, false, net.minecraft.util.Prediction.PREDICTED);")
+                //else:
+                //    cog.outl("p.drop(stack, false);")
+                //]]]
                 p.drop(stack, false);
+                //[[[end]]]
             }
         }
     }

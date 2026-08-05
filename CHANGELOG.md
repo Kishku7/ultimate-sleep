@@ -3,6 +3,31 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.7] - 2026-08-05
+
+### Fixed
+- **`LivingEntity.drop(ItemStack, boolean)` gains a trailing `Prediction` at 26.3-snapshot-7** -- a
+  hard compile break at the one place Ultimate Sleep uses it: `RewardManager.grant` throws the
+  golden-carrot reward on the ground when the sleeper's inventory is full. Now cog-gated
+  (predicate `compat.drop_pred`, `>= 26.3`): 26.3+ emits
+  `p.drop(stack, false, Prediction.PREDICTED)`, every earlier cell keeps the 2-arg form. `PREDICTED`
+  is what vanilla passes at the equivalent player-action overflow sites (`AbstractContainerMenu`,
+  `CraftingMenu`, `ResultSlot`); the argument only selects the swing broadcast, so the item entity
+  spawns either way and the reward behaves exactly as before.
+
+### Changed
+- **Fabric 26.3 cell moved to MC 26.3-snapshot-7** (from snapshot-6): fabric-api
+  `0.156.1+26.3` -> `0.156.2+26.3`, resource `pack_format` `94` -> `95`.
+- **The 26.3 jar's MC window is now SNAPSHOT-EXCLUSIVE**, `[26.3-alpha.7, 26.3-alpha.8)`. The upper
+  bound was the line-wide `26.4`, which was already wrong in principle -- every 26.3 snapshot bumps
+  pack_format -- and is now wrong in practice too, since the `drop` signature above differs across
+  snapshots within the line. This brings the cell in line with every other 26.3 mod cell.
+- `mod_version` 1.2.6 -> 1.2.7. Only the Fabric 26.3 cell was rebuilt.
+
+### Notes
+- The other snapshot-7 surfaces do not touch this mod: the client-side `LocalPlayer.drop(boolean)`
+  return-type change (server-side mod), the `InteractionResult.SwingSource` rename, and the 32 new
+  concrete slab/stair blocks.
 ## [1.2.6] - 2026-08-03 (full matrix)
 
 ### Fixed

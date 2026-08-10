@@ -3,15 +3,24 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.2.8] - 2026-08-10 (full matrix)
+## [1.2.9] - 2026-08-10 (full matrix)
+
+1.2.9 supersedes 1.2.8, which was pulled the same day. The code is identical; 1.2.8's release notes
+described the trigger imprecisely (see the exact daylight windows below) and the record was corrected
+under a new number rather than rewritten under the old one.
 
 ### Fixed
-- **ACCELERATE never ended during rain or a thunderstorm, and left the world clock permanently
+- **ACCELERATE never ended while it was raining or thundering, and left the world clock permanently
   running fast** ([mod_support #10](https://github.com/Kishku7/mod_support/issues/10), follow-up
   report). `SleepEngine` decided the time-lapse was over by asking whether it was bright outside
-  (`Level.isBrightOutside()` / `isDay()`). That is derived from sky light, and rain -- thunder
-  especially -- holds sky light below the daylight threshold at *any* time of day, so during a storm
-  the end condition never became true. Three things followed, all reported:
+  (`Level.isBrightOutside()` / `isDay()`). That reads the sky LIGHT, not the clock, and weather feeds
+  straight into it -- `skyDarken < 4` is the daylight test, and solving it exactly gives:
+  - **thunder: `isDay()` is false at EVERY hour, including high noon.** There is no time of day at
+    which a thunderstorm reads as daytime, so the end condition could never become true.
+  - **plain rain: false except a narrow band around noon** -- so most of an ordinary rainy day is
+    "night" by this test too. Rain alone was enough to trigger this; a storm merely made it certain.
+  - clear weather: the normal, expected daytime band.
+  Three things followed, all reported:
   - the accelerated clock rate was never restored. `ServerClockManager` extends `SavedData`, so the
     fast rate was written into the save and survived restarts; the only way out was repairing the
     world by hand with `/tick freeze` and `/time add`.

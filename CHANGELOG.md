@@ -3,6 +3,17 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.10] - 2026-08-10 (full matrix)
+
+Same code as 1.2.9. Reissued so the shipped build is the one that cleared the FULL gate rather
+than a reduced one: 1.2.9 was published after a CRITICAL-tier boot pass only (10 cells), on the
+argument that its jars differed from the COMPLETE-swept 1.2.8 by nothing but a version string.
+That argument is true and it is still a shortcut, and the bug this line exists to fix was itself
+found in the gap between "it boots" and "it behaves". 1.2.10 carries a COMPLETE server-boot sweep
+plus a new in-game storm gate (a real player, a real bed, a live thunderstorm) that reproduces
+mod_support #10 end to end -- the first release of this mod verified by something other than a
+boot log.
+
 ## [1.2.9] - 2026-08-10 (full matrix)
 
 1.2.9 supersedes 1.2.8, which was pulled the same day. The code is identical; 1.2.8's release notes

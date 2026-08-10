@@ -57,7 +57,8 @@ public final class VoteManager {
 
         // A new day clears all failed-vote lockouts.
         ServerLevel ow = server.overworld();
-        if (!lockedTonight.isEmpty() && (ow == null || Era.bright(ow))) {
+        // CLOCK, not sky light -- a storm would otherwise hold failed-vote lockouts past dawn.
+        if (!lockedTonight.isEmpty() && (ow == null || Era.dayPhase(ow))) {
             lockedTonight.clear();
         }
 

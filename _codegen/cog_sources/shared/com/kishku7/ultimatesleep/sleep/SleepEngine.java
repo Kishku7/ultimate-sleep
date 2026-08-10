@@ -39,6 +39,10 @@ public final class SleepEngine {
     private volatile boolean skipPending = false;
     private volatile float accelRate = 1.0f;
     private long accelStartTick = 0;
+    // Absolute day-clock time the acceleration must reach (start clock + ticks-to-morning).
+    private long accelTargetTime = 0;
+    // Real-tick failsafe. Acceleration may NEVER outlive this, whatever the world is doing.
+    private long accelDeadlineTick = 0;
     // Set when a mod-driven skip begins (INSTANT or ACCELERATE); drives the one-shot notify_wake
     // broadcast that fires when morning actually arrives.
     private volatile boolean awaitingMorning = false;
@@ -95,6 +99,10 @@ public final class SleepEngine {
         double secs = speedSeconds(settings.string("accelerate_speed"));
         accelRate = (float) Math.max(1.0, remaining / (secs * 20.0));
         accelStartTick = server.getTickCount();
+        accelTargetTime = Era.clockTime(ow) + remaining;
+        // Belt and braces: 3x the intended wall-clock duration + 10s. Nothing is allowed to leave
+        // the world clock running fast -- the rate is SavedData and survives a restart.
+        accelDeadlineTick = accelStartTick + (long) Math.ceil(secs * 20.0 * 3.0) + 200L;
         setClockRate(server, ow, accelRate);
         accelerating = true;
         awaitingMorning = true;
@@ -123,7 +131,7 @@ public final class SleepEngine {
     private void notifyWakeIfDue(MinecraftServer server) {
         if (!awaitingMorning) return;
         ServerLevel ow = server.overworld();
-        if (ow != null && !Era.bright(ow)) return; // not morning yet
+        if (ow != null && !Era.dayPhase(ow)) return; // not morning yet (CLOCK, not sky light)
         awaitingMorning = false;
         if (settings.bool("notify_wake")) {
             server.getPlayerList().broadcastSystemMessage(Component.literal(
@@ -131,34 +139,70 @@ public final class SleepEngine {
         }
     }
 
-    /** While accelerating, stop and wake everyone once dawn arrives. Runs every tick, any mode. */
+    /**
+     * While accelerating, hand the last stretch of the night back to the vanilla skip once the
+     * CLOCK says dawn is near, then restore rate 1.0. Runs every tick, any mode.
+     *
+     * The end condition is the day CLOCK and NEVER bright()/isBrightOutside(). Sky light is pushed
+     * below the daylight threshold by rain and (hard) by thunder at any time of day, so a
+     * brightness end condition never fires during a storm -- mod_support #10's follow-up report:
+     * the clock rate stayed cranked FOREVER (it is SavedData, so it survived restarts and had to be
+     * repaired by hand with /tick freeze + /time add), and because `accelerating` never cleared,
+     * the engine stopped evaluating anything at all, so no later sleep did anything either.
+     *
+     * Ending through requestSkip() rather than just restoring the rate means ACCELERATE finishes in
+     * exactly the same vanilla block INSTANT uses, so wakeUpAllPlayers, the weather reset
+     * (preserve_weather) and the world-progression mixin fire identically in BOTH skip modes.
+     * Previously ACCELERATE bypassed all three: storms outlived the night whatever preserve_weather
+     * said, and nothing progressed.
+     */
     private void manageAcceleration(MinecraftServer server) {
         if (!accelerating) return;
         ServerLevel ow = server.overworld();
         if (ow != null) Era.accelStep(server, ow, accelRate); // pre-26: advances dayTime; 26: no-op
-        boolean day = ow == null || Era.bright(ow);
-        if (day) {
-            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                if (p.isSleeping()) p.stopSleepInBed(false, true);
-            }
-            stopAccelerate(server);
+
+        // A single clock step is `accelRate` ticks wide (hundreds at FAST), so leave a margin
+        // rather than testing for an exact landing on the wake-up marker at clock 0.
+        long margin = Math.max(200L, (long) Math.ceil(accelRate) * 2L);
+        boolean nearDawn = ow == null || Era.clockTime(ow) >= accelTargetTime - margin;
+        boolean timedOut = server.getTickCount() >= accelDeadlineTick;
+        if (!nearDawn && !timedOut) return;
+
+        if (timedOut && !nearDawn) {
+            UltimateSleep.LOGGER.warn("[UltimateSleep] ACCELERATE failsafe: deadline reached before "
+                    + "dawn -- restoring clock rate 1.0 and finishing the skip.");
         }
+        stopAccelerate(server);
+        requestSkip(); // vanilla finishes the night: wake + weather + progression
     }
 
     /**
-     * No-op now: we do NOT touch the playersSleepingPercentage gamerule. The vanilla command
+     * Server-start hook (wired to SERVER_STARTED on all three loaders).
+     *
+     * We still do NOT touch the playersSleepingPercentage gamerule: the vanilla command
      * `gamerule playersSleepingPercentage <n>` is rejected in 26.x (Incorrect argument), and it's
      * unnecessary anyway -- ServerLevelSleepSkipMixin overrides the overworld sleep check, so
-     * vanilla never self-skips regardless of the gamerule value. Kept for existing callers.
+     * vanilla never self-skips regardless of the gamerule value. What this DOES do now is repair a
+     * stuck world clock rate; see below.
      */
     public void applyConfig(MinecraftServer server) {
-        // intentionally empty
+        // Clock-rate self-heal (mod_support #10 follow-up). ServerClockManager extends SavedData,
+        // so an accelerated rate is written to disk and survives a restart. If acceleration is ever
+        // interrupted -- a crash, a kill, or the pre-1.2.7 storm deadlock -- the world is left
+        // permanently time-lapsing with no vanilla mechanism to put it back. Nothing else resets
+        // it, so force 1.0 on every server start. Harmless when it is already 1.0.
+        if (accelerating) return;
+        ServerLevel ow = server.overworld();
+        if (ow != null) setClockRate(server, ow, 1.0f);
     }
 
     public void tick(MinecraftServer server) {
         notifyWakeIfDue(server);
         manageAcceleration(server);
-        if (accelerating) return; // night is time-lapsing; don't evaluate new triggers
+        // Don't evaluate new triggers while a skip is in flight: time-lapsing (ACCELERATE) or a
+        // skip already handed to vanilla and not yet consumed (INSTANT, and the ACCELERATE handoff
+        // -- without skipPending here the same tick would immediately start a second acceleration).
+        if (accelerating || skipPending) return;
 
         if (!settings.bool("enabled") || !"SIMPLE".equals(settings.string("requirement_mode"))) {
             if (!sleeping.isEmpty()) sleeping.clear();

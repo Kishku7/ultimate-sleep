@@ -48,7 +48,10 @@ public final class RewardManager {
             if (!p.isSpectator() && p.isSleeping() && p.level() == ow) current.add(p.getUUID());
         }
 
-        boolean bright = Era.bright(ow);
+        // CLOCK, not sky light: bright()/isBrightOutside() reads night all day long during
+        // rain or thunder, so a brightness edge never fires in a storm and the wake reward
+        // was silently never granted (same root cause as the ACCELERATE deadlock, #10).
+        boolean bright = Era.dayPhase(ow);
         if (!wasBright && bright && anyRewardEnabled()) {
             for (UUID id : lastSleepers) {
                 ServerPlayer p = server.getPlayerList().getPlayer(id);

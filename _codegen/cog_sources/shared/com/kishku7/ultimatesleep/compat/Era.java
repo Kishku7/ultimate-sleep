@@ -129,6 +129,28 @@ public final class Era {
         //[[[end]]]
     }
 
+    /**
+     * Absolute overworld DAY-CLOCK time (26: the ServerClockManager overworld clock; pre-26: the
+     * level dayTime). This is the WEATHER-INDEPENDENT clock. bright() is NOT: it is derived from
+     * sky light, which rain and (hard) thunder push below the daylight threshold at ANY time of
+     * day, so bright() reads "night" all day long during a storm. Anything asking "has morning
+     * arrived" must ask the clock, not the light.
+     */
+    public static long clockTime(ServerLevel ow) {
+        //[[[cog
+        //for ln in compat.era_clocktime_body(ver): cog.outl(ln)
+        //]]]
+        return ow.getOverworldClockTime();
+        //[[[end]]]
+    }
+
+    /** True during the DAY half of the cycle (clock 0..11999). Weather-independent; see clockTime(). */
+    public static boolean dayPhase(ServerLevel ow) {
+        long t = clockTime(ow) % 24000L;
+        if (t < 0L) t += 24000L;
+        return t < 12000L;
+    }
+
     /** Per-tick acceleration step. 26: no-op (clock rate drives time). Pre-26: advance dayTime. */
     public static void accelStep(MinecraftServer server, ServerLevel ow, float rate) {
         //[[[cog

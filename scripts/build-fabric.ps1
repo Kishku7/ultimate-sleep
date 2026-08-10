@@ -41,9 +41,9 @@ foreach ($c in $cells) {
 # ---- 26 line (one cell, rebuilt per 26.X with -P overrides + PACK_FORMAT) ----
 $cell26 = Join-Path $fabric "26"
 $matrix = [ordered]@{
-  "26.1" = @{ mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; lo="26.1-"; hi="26.2"; pf="84"; modver="1.2.6" }
-  "26.2" = @{ mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; lo="26.2-"; hi="26.3"; pf="88"; modver="1.2.6" }
-  "26.3" = @{ mc="26.3-snapshot-7"; api="0.156.2+26.3";   loader="0.19.3"; lo="26.3-alpha.7"; hi="26.3-alpha.8"; pf="95"; modver="1.2.7" }
+  "26.1" = @{ mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; lo="26.1-"; hi="26.2"; pf="84"; modver="1.2.8" }
+  "26.2" = @{ mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; lo="26.2-"; hi="26.3"; pf="88"; modver="1.2.8" }
+  "26.3" = @{ mc="26.3-snapshot-7"; api="0.156.2+26.3";   loader="0.19.3"; lo="26.3-alpha.7"; hi="26.3-alpha.8"; pf="95"; modver="1.2.8" }
 }
 $modver = (Select-String -Path (Join-Path $cell26 "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
 foreach ($v in $matrix.Keys) {

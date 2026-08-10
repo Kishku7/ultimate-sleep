@@ -88,6 +88,11 @@ def era_ticks_body(v):
         "        return r < 1 ? 1 : r;",
     ]
 
+def era_clocktime_body(v):
+    # WEATHER-INDEPENDENT day clock. 26: the ServerClockManager overworld clock; pre-26: dayTime.
+    src = "ow.getOverworldClockTime()" if is26(v) else "ow.getDayTime()"
+    return ["        return %s;" % src]
+
 def era_setrate_body(v):
     if is26(v):
         return ["        ow.dimensionType().defaultClock().ifPresent(clock -> server.clockManager().setRate(clock, rate));"]

@@ -3,6 +3,47 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.8] - 2026-08-10 (full matrix)
+
+### Fixed
+- **ACCELERATE never ended during rain or a thunderstorm, and left the world clock permanently
+  running fast** ([mod_support #10](https://github.com/Kishku7/mod_support/issues/10), follow-up
+  report). `SleepEngine` decided the time-lapse was over by asking whether it was bright outside
+  (`Level.isBrightOutside()` / `isDay()`). That is derived from sky light, and rain -- thunder
+  especially -- holds sky light below the daylight threshold at *any* time of day, so during a storm
+  the end condition never became true. Three things followed, all reported:
+  - the accelerated clock rate was never restored. `ServerClockManager` extends `SavedData`, so the
+    fast rate was written into the save and survived restarts; the only way out was repairing the
+    world by hand with `/tick freeze` and `/time add`.
+  - `accelerating` never cleared, and the engine skips all trigger evaluation while it is set, so
+    every later sleep silently did nothing for the rest of that world's life.
+  - with the clock racing, day arrived seconds after entering a bed, so vanilla's ongoing sleep
+    gate ejected the player almost immediately -- which looked like the (separately real, and fixed
+    in 1.2.6) `sleep_anytime` bug coming back.
+  The end condition is now the **day clock** (`Era.clockTime` / `Era.dayPhase`), which is
+  weather-independent, plus a hard real-tick failsafe (3x the intended duration + 10s) so no future
+  condition can strand the rate again.
+- **A stuck clock rate now self-heals.** The overworld clock rate is forced back to `1.0` on every
+  server start unless a time-lapse is genuinely in progress. Existing worlds left racing by the bug
+  above repair themselves on the next start -- no commands needed.
+- **ACCELERATE ignored `preserve_weather` and did no world progression.** It restored the clock and
+  woke players itself, bypassing the vanilla skip block entirely, so storms outlived the night
+  whatever `preserve_weather` was set to, and crops / furnaces / animals / item despawn never got
+  their night. ACCELERATE now hands the final stretch of the night back to the same vanilla skip
+  INSTANT uses, so `wakeUpAllPlayers`, the weather reset and `ServerLevelProgressionMixin` fire
+  identically in both skip modes.
+- **Sleep rewards were never granted during a storm**, for the same sky-light reason:
+  `RewardManager` watched for a dark -> bright edge that a storm suppresses. Now clock-based.
+- **Failed-vote lockouts outlived dawn during a storm** (`VoteManager` cleared them on the same
+  brightness edge). Now clock-based.
+
+### Notes
+- `AutoSleepManager` deliberately still uses `Era.bright()`: "is it dark enough to get into a bed"
+  is exactly vanilla's `BedRule.WHEN_DARK` / `isDarkOutside` rule, storms included. Only the
+  "has morning arrived" questions moved to the clock.
+- No new mixin and no new injection point -- this is engine logic only, so the fix carries no
+  additional version-gate risk across the matrix.
+
 ## [1.2.7] - 2026-08-05
 
 ### Fixed

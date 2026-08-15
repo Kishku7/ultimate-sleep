@@ -13,9 +13,11 @@ import org.bukkit.entity.LivingEntity;
  * progression (the functional spec section 7).
  *
  * What a plugin CAN do without NMS:
- *   - progress_crops: a bounded randomTickSpeed boost -- for a skip of N ticks at the world's
- *     random tick rate R, boost the gamerule to BOOST for ceil(N*R/BOOST) real ticks (capped),
- *     which delivers the same expected number of random ticks the skipped night would have.
+ *   - progress_crops: a bounded randomTickSpeed boost -- a skip of N ticks is spread over a
+ *     window of progression_catchup_seconds real seconds, with the gamerule raised to
+ *     max(worldRate, 3 * ceil(N / window)) for that window. Total delivered is ~3*N random
+ *     ticks: what the night would have produced at VANILLA's rate, never scaled by the world's
+ *     own randomTickSpeed (which used to stretch the window instead).
  *     Covers crops, saplings, bamboo, sugar cane/cactus, and leaf decay (all random-tick driven).
  *   - progress_animal_husbandry: Ageable age arithmetic -- baby growth (negative age counts up)
  *     and breeding cooldowns (positive age counts down) advance by the skipped ticks. Skipped on
@@ -26,8 +28,15 @@ import org.bukkit.entity.LivingEntity;
  */
 final class Progression {
 
-    private static final int BOOST = 300;
-    private static final int MAX_BOOST_TICKS = 200;
+    /**
+     * Vanilla's default randomTickSpeed. The catch-up is computed from THIS, never from the
+     * world's current rate: the growth a night represents is a vanilla constant, so a world
+     * running randomTickSpeed 25 must not pay 8.3x the cost of a vanilla one for the same night.
+     * Matches ProgressionState.VANILLA_RANDOM_TICK_SPEED on the mod side.
+     */
+    private static final int VANILLA_RANDOM_TICK_SPEED = 3;
+    /** Fallback window when progression_catchup_seconds is 0 or nonsense (10s at 20 tps). */
+    private static final int DEFAULT_BOOST_TICKS = 200;
 
     private final UltimateSleepPlugin plugin;
     private final PluginSettings settings;
@@ -55,13 +64,19 @@ final class Progression {
 
         if (settings.bool("progress_crops") && boostTicksLeft == 0) {
             Integer rts = w.getGameRuleValue(GameRule.RANDOM_TICK_SPEED);
-            int base = rts == null ? 3 : rts;
-            if (base > 0 && base < BOOST) {
+            int base = rts == null ? VANILLA_RANDOM_TICK_SPEED : rts;
+            if (base > 0) {
+                // Window comes from the setting, not from the world's rate. Total random ticks
+                // delivered is boosted * window ~= 3 * skippedTicks -- the vanilla amount -- however
+                // high the world's own randomTickSpeed happens to be.
+                int seconds = settings.integer("progression_catchup_seconds");
+                int window = seconds > 0 ? seconds * 20 : DEFAULT_BOOST_TICKS;
+                long slice = Math.max(1L, (skippedTicks + window - 1L) / window);
+                long boosted = Math.max((long) base, (long) VANILLA_RANDOM_TICK_SPEED * slice);
                 originalRandomTickSpeed = base;
                 boostWorld = w;
-                boostTicksLeft = (int) Math.min(MAX_BOOST_TICKS,
-                        Math.max(1, (skippedTicks * base) / BOOST));
-                w.setGameRule(GameRule.RANDOM_TICK_SPEED, BOOST);
+                boostTicksLeft = window;
+                w.setGameRule(GameRule.RANDOM_TICK_SPEED, (int) Math.min(Integer.MAX_VALUE, boosted));
             }
         }
 

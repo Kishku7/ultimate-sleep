@@ -25,7 +25,7 @@ randomTickSpeed gamerule.
   `max(savedRate, 3 * slice)`).
 
 ### Added
-- **`progression_catchup_seconds`** (INT, default 10, 0-300; 0 = apply everything in one tick, the
+- **`progression_catchup_seconds`** (INT, default 10; 0 = apply everything in one tick, the
   pre-1.3.0 behaviour). How long the world takes to catch up after a skip, in real seconds. The
   night is divided into `seconds * 20` slices and one slice is applied per tick, so the wall-clock
   duration is the same whether the sleeper went to bed at dusk or just before dawn. Settable via
@@ -42,6 +42,16 @@ randomTickSpeed gamerule.
   `tick(Ljava/util/function/BooleanSupplier;)V`, the same method (and descriptor) the existing
   progression injects already target on every supported cell, so no cell gains version-gate risk
   and no `mixins.json` changed.
+### Plugin (Paper/Bukkit)
+- The plugin never had the one-tick stall -- its crop catch-up already wound a boost down over at
+  most 200 ticks -- but it derived that WINDOW from the world's random-tick rate
+  (`skippedTicks * base / BOOST`), so a high `randomTickSpeed` stretched the burst and delivered
+  proportionally more growth. Same flaw, different shape. It now spreads over
+  `progression_catchup_seconds` (new on the plugin's settings registry too, same default of 10)
+  and raises the rule to `max(worldRate, 3 * ceil(N / window))`, delivering ~3*N random ticks
+  whatever the world's own rate is.
+- **The plugin joins the mod-wide version line at 1.3.0** (it had kept its own 1.2.0 line while it
+  had no behaviour changes to ship). It is rebuilt for this release.
 ## [1.2.10] - 2026-08-10 (full matrix)
 
 Same code as 1.2.9. Reissued so the shipped build is the one that cleared the FULL gate rather

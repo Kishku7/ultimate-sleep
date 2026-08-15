@@ -81,6 +81,8 @@ public final class PluginSettings {
         reg("world_progression_enabled", Type.BOOL, false, "Master toggle for world progression on sleep.");
         reg("progress_crops", Type.BOOL, true, "Crops + plant growth via a bounded random-tick boost.");
         reg("progress_animal_husbandry", Type.BOOL, true, "Breeding cooldowns + baby growth (not on Folia).");
+        reg("progression_catchup_seconds", Type.INT, 10,
+                "Real seconds the world takes to catch up after a skip (0 = one short burst).");
         // auto-sleep
         reg("auto_sleep_enabled", Type.BOOL, true, "Allow players to opt into auto-sleep at dusk.");
         // afk

@@ -14,13 +14,15 @@
 # VERSION SOURCE -- the cells' gradle.properties, which are bumped together. Read them all and
 # require agreement rather than trusting any single hand-maintained field.
 #
-# THE PLUGIN JARS ARE EXEMPT. Paper/Folia artifacts (ultimate-sleep-<ver>+<line>-plugin.jar) DO
-# carry a "+", so they match the version pattern -- but the plugin runs its OWN version line
-# (1.2.0, per the mod-rules "plugins version differently" clause) and its current jar is therefore
-# NOT the mod's current version by definition. Pruning on the mod version would delete a perfectly
-# current, published-matching plugin binary every single mod build. So -plugin.jar is skipped here,
-# and this script is NOT wired into build-plugin.ps1. Learned 2026-08-03: the first pass pruned the
-# three 1.2.0 plugin jars and they had to be rebuilt.
+# THE PLUGIN JARS ARE EXEMPT. Paper artifacts (ultimate-sleep-<ver>+<line>-plugin.jar) DO carry a
+# "+", so they match the version pattern -- but the plugin is not necessarily on the mod's current
+# version. It ran a separate line (1.2.0) until 1.3.0, when a real behaviour change finally gave it
+# something to ship and it joined the mod-wide line; it can fall behind again any release the
+# plugin is not rebuilt. Pruning on the mod version would then delete a perfectly current,
+# published-matching plugin binary on every mod build. So -plugin.jar is skipped here, and this
+# script is NOT wired into build-plugin.ps1. Learned 2026-08-03: the first pass pruned the three
+# 1.2.0 plugin jars and they had to be rebuilt. CONSEQUENCE (2026-08-15): a superseded plugin jar
+# is never auto-removed -- delete it by hand when the plugin DOES get rebuilt at a new version.
 # Names that parse to no version at all are also left alone rather than guessed at.
 #
 #   pwsh scripts\dist-prune.ps1              # prune to the current version

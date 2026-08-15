@@ -36,7 +36,7 @@ public final class UltimateSleepScreen extends Screen {
             {"reward_regeneration", "reward_regeneration_minutes", "reward_golden_carrot",
                     "reward_speed_boost", "reward_speed_boost_percent", "reward_speed_boost_minutes"},
             {"world_progression_enabled", "progress_crops", "progress_animal_husbandry",
-                    "progress_smelting", "progress_despawn_timers"},
+                    "progress_smelting", "progress_despawn_timers", "progression_catchup_seconds"},
             {"auto_sleep_enabled", "afk_disable_toggle", "afk_threshold_seconds", "provide_afk_command"},
             {}
     };

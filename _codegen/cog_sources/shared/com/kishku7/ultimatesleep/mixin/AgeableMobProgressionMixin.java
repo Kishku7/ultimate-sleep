@@ -9,9 +9,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * World progression -- animal husbandry. On a night-skip tick, advance each loaded animal's age
- * counter toward 0 by ticksSlept: babies (age &lt; 0) grow toward adulthood, and adult breeding
- * cooldowns (age &gt; 0) tick down. Applied once per animal on the skip tick (aiStep runs once).
+ * World progression -- animal husbandry. While a night-skip catch-up slice is active, advance
+ * each loaded animal's age counter toward 0 by THAT SLICE: babies (age &lt; 0) grow toward
+ * adulthood, and adult breeding cooldowns (age &gt; 0) tick down. One slice per animal per tick
+ * (aiStep runs once a tick), summing to exactly one night over the catch-up window.
  */
 @Mixin(AgeableMob.class)
 public abstract class AgeableMobProgressionMixin {
@@ -21,7 +22,7 @@ public abstract class AgeableMobProgressionMixin {
         if (!ProgressionState.active || !UltimateSleep.settings().bool("progress_animal_husbandry")) return;
         AgeableMob self = (AgeableMob) (Object) this;
         if (self.level().isClientSide()) return;
-        long ticks = ProgressionState.ticks;
+        long ticks = ProgressionState.ticksThisTick;
         int age = self.getAge();
         if (age < 0) {
             self.setAge((int) Math.min(0L, age + ticks));

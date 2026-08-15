@@ -186,6 +186,9 @@ public final class SleepEngine {
      * stuck world clock rate; see below.
      */
     public void applyConfig(MinecraftServer server) {
+        // Drop any catch-up slice left in flight by a crash (the statics outlive a world in
+        // singleplayer), so a fresh world never inherits one.
+        ProgressionState.reset();
         // Clock-rate self-heal (mod_support #10 follow-up). ServerClockManager extends SavedData,
         // so an accelerated rate is written to disk and survives a restart. If acceleration is ever
         // interrupted -- a crash, a kill, or the pre-1.2.7 storm deadlock -- the world is left

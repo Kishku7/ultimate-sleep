@@ -3,6 +3,45 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-08-15 (full matrix)
+
+World progression no longer lands in a single tick, and it no longer scales with the world's
+randomTickSpeed gamerule.
+
+### Fixed
+- **A night-skip stalled the server thread for seconds.** `ServerLevelProgressionMixin` applied a
+  whole night of catch-up inside the one tick that performed the skip: it set
+  `randomTickSpeed = randomTickSpeed * ticksSlept` (e.g. 33,000 at the vanilla base of 3) for that
+  tick, and `FurnaceProgressionMixin` replayed `AbstractFurnaceBlockEntity.serverTick` once per
+  slept tick per loaded furnace. On a live server this produced a 2-3 second freeze on every
+  sleep, logged by vanilla as `Can't keep up! Is the server overloaded? Running 2000-3000ms
+  behind`. Progression is now spread across real ticks (see below) so no single tick carries more
+  than its slice.
+- **The stall scaled with a gamerule that has nothing to do with sleep.** The random-tick boost
+  multiplied the world's CURRENT `randomTickSpeed`, so a world running `randomTickSpeed 25` paid
+  8.3x the cost of a vanilla world for the same night (measured: 2-3s -> ~7s). The boost is now
+  computed from the vanilla base of 3 regardless of the gamerule's value, so the cost of a night
+  is a constant. The world's own rate is never lowered during catch-up (the applied value is
+  `max(savedRate, 3 * slice)`).
+
+### Added
+- **`progression_catchup_seconds`** (INT, default 10, 0-300; 0 = apply everything in one tick, the
+  pre-1.3.0 behaviour). How long the world takes to catch up after a skip, in real seconds. The
+  night is divided into `seconds * 20` slices and one slice is applied per tick, so the wall-clock
+  duration is the same whether the sleeper went to bed at dusk or just before dawn. Settable via
+  `/usleep set progression_catchup_seconds <n>` and on the admin GUI's World Progression page.
+
+### Changed
+- **`ProgressionState` now carries a per-tick slice, not the whole night.** `ProgressionState.ticks`
+  used to mean "ticks slept" and was read by all four progression consumers (crops, furnaces,
+  animals, item despawn) on the single skip tick. It now means "sim ticks to apply THIS tick" and
+  is drawn from `ProgressionState.remaining` by a pump on `ServerLevel.tick`. Any future consumer
+  MUST treat it as a slice: reading it as the whole night while `active` spans multiple ticks would
+  apply a full night per tick.
+- No new mixin class and no new injection point: the pump is a HEAD inject on
+  `tick(Ljava/util/function/BooleanSupplier;)V`, the same method (and descriptor) the existing
+  progression injects already target on every supported cell, so no cell gains version-gate risk
+  and no `mixins.json` changed.
 ## [1.2.10] - 2026-08-10 (full matrix)
 
 Same code as 1.2.9. Reissued so the shipped build is the one that cleared the FULL gate rather

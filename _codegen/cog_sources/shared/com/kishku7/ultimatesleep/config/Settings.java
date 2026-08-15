@@ -90,6 +90,8 @@ public final class Settings {
         reg("progress_animal_husbandry", Type.BOOL, true, "Breeding cooldowns + baby growth.");
         reg("progress_smelting", Type.BOOL, true, "Furnaces / smokers / blast furnaces.");
         reg("progress_despawn_timers", Type.BOOL, false, "Item/entity despawn timers advance.");
+        reg("progression_catchup_seconds", Type.INT, 10,
+                "Real seconds the world takes to catch up after a skip (0 = all in one tick).");
         // auto-sleep
         reg("auto_sleep_enabled", Type.BOOL, true, "Allow players to opt into auto-sleep at dusk.");
         // afk

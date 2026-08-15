@@ -10,9 +10,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * World progression -- despawn timers. On a night-skip tick, advance dropped-item age toward the
- * 6000-tick lifetime by ticksSlept, so litter that would have despawned over the night does so.
- * Items flagged immortal (age == -32768) are left alone. Applied once per item on the skip tick.
+ * World progression -- despawn timers. While a night-skip catch-up slice is active, advance
+ * dropped-item age toward the 6000-tick lifetime by THAT SLICE, so litter that would have despawned
+ * over the night does so. Items flagged immortal (age == -32768) are left alone. One slice per item
+ * per tick, summing to exactly one night over the catch-up window.
  */
 @Mixin(ItemEntity.class)
 public abstract class ItemEntityProgressionMixin {
@@ -25,7 +26,7 @@ public abstract class ItemEntityProgressionMixin {
         if (!ProgressionState.active || !UltimateSleep.settings().bool("progress_despawn_timers")) return;
         ItemEntity self = (ItemEntity) (Object) this;
         if (self.level().isClientSide() || this.age == -32768) return;
-        long ticks = ProgressionState.ticks;
+        long ticks = ProgressionState.ticksThisTick;
         this.age = (int) Math.min(6000L, this.age + ticks);
     }
 }

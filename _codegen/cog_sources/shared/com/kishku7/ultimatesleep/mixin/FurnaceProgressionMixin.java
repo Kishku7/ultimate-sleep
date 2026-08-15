@@ -19,9 +19,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * progress_smelting: when a night-skip progression is active this tick, fast-forward this furnace
- * by running the real serverTick ticksSlept times (re-entry guarded so the replay runs the normal
- * body), then cancel the outer call. No smelting math is replicated -- we just replay vanilla's
+ * progress_smelting: when a night-skip catch-up slice is active this tick, fast-forward this
+ * furnace by running the real serverTick once per SIMULATED TICK IN THAT SLICE (re-entry guarded so
+ * the replay runs the normal body), then cancel the outer call. Pre-1.3.0 this replayed the whole
+ * night (ticksSlept, up to ~11k iterations per furnace) in the single skip tick, which is half of
+ * why a sleep stalled the server; the slice bounds it. No smelting math is replicated -- we just replay vanilla's
  * own tick, so fuel use / recipe output / lit state stay exactly correct.
  * (serverTick's first parameter is ServerLevel from 1.21.2; Level before -- cog emits the era shape.)
  */
@@ -44,7 +46,7 @@ public abstract class FurnaceProgressionMixin {
     //[[[end]]]
         if (ultimateSleep$reentry) return; // inside our own replay -> let the normal body run
         if (!ProgressionState.active || !UltimateSleep.settings().bool("progress_smelting")) return;
-        long ticks = ProgressionState.ticks;
+        long ticks = ProgressionState.ticksThisTick;
         if (ticks <= 0) return;
 
         ultimateSleep$reentry = true;

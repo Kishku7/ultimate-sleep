@@ -77,6 +77,11 @@ final class Progression {
                 boostWorld = w;
                 boostTicksLeft = window;
                 w.setGameRule(GameRule.RANDOM_TICK_SPEED, (int) Math.min(Integer.MAX_VALUE, boosted));
+                // Mirrors the mod's progression start/end pair: an admin who changes
+                // progression_catchup_seconds can see it working.
+                plugin.getLogger().info(String.format(
+                        "progression start: catching up %d ticks over ~%ds (rate %d -> %d)",
+                        skippedTicks, window / 20, base, (int) boosted));
             }
         }
 
@@ -104,6 +109,7 @@ final class Progression {
     void tick() {
         if (boostTicksLeft > 0 && --boostTicksLeft == 0) {
             restore();
+            plugin.getLogger().info("progression end: catch-up window complete, randomTickSpeed restored");
         }
     }
 

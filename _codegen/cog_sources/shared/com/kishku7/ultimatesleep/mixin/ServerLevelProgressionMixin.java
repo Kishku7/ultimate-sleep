@@ -52,8 +52,11 @@ public abstract class ServerLevelProgressionMixin {
     @Unique private boolean ultimateSleep$active = false;
     /** Simulated ticks still owed on this level. */
     @Unique private long ultimateSleep$remaining = 0L;
-    /** Simulated ticks to apply per real tick; Long.MAX_VALUE means "all at once" (seconds <= 0). */
+    /** Simulated ticks to apply per real tick; 0 means "all at once" (seconds <= 0). */
     @Unique private long ultimateSleep$slice = 0L;
+    /** Bookkeeping for the start/end log pair: total queued, and the gameTime the run began. */
+    @Unique private long ultimateSleep$runTotal = 0L;
+    @Unique private long ultimateSleep$runStartTick = 0L;
 
     /**
      * Pay off one slice. HEAD of the level tick, so the raised gamerule covers this tick's chunk
@@ -61,6 +64,7 @@ public abstract class ServerLevelProgressionMixin {
      */
     @Inject(method = "tick(Ljava/util/function/BooleanSupplier;)V", at = @At("HEAD"))
     private void ultimateSleep$pumpProgression(BooleanSupplier haveTime, CallbackInfo ci) {
+        ServerLevel self = (ServerLevel) (Object) this;
         // A previous tick threw before its TAIL ran: unwind before starting a new slice so the
         // gamerule can never stay raised across ticks.
         if (ultimateSleep$active) ultimateSleep$endSlice();
@@ -82,8 +86,19 @@ public abstract class ServerLevelProgressionMixin {
         ProgressionState.ticksThisTick = slice;
         ultimateSleep$active = true;
 
+        if (ultimateSleep$remaining <= 0L && ultimateSleep$runTotal > 0L) {
+            // Matches the ACCELERATE start/end pair the engine already logs, and gives an admin who
+            // changes progression_catchup_seconds a way to SEE it working. It is also the only
+            // external observable of the catch-up window: the random-tick boost is applied and
+            // restored inside a single tick body, so nothing outside the tick can ever sample it.
+            long elapsed = self.getGameTime() - ultimateSleep$runStartTick + 1L;
+            UltimateSleep.LOGGER.info(String.format(
+                    "[UltimateSleep] progression end: applied %d ticks over %d server ticks (%.1fs)",
+                    ultimateSleep$runTotal, elapsed, elapsed / 20.0));
+            ultimateSleep$runTotal = 0L;
+        }
+
         if (UltimateSleep.settings().bool("progress_crops")) {
-            ServerLevel self = (ServerLevel) (Object) this;
             //[[[cog
             //cog.outl("            ultimateSleep$savedRandomTickSpeed = %s;" % compat.rndtick_get(ver))
             //]]]
@@ -124,11 +139,21 @@ public abstract class ServerLevelProgressionMixin {
         long ticksSlept = after - gameTime;
         if (ticksSlept <= 0L) return;
 
+        boolean fresh = ultimateSleep$remaining <= 0L;
         ultimateSleep$remaining += ticksSlept;
 
         // How long the world should take to catch up, in real seconds. 0 (or a nonsense value)
         // means "all in one tick" -- the pre-1.3.0 behaviour, kept as an opt-in.
         int seconds = UltimateSleep.settings().integer("progression_catchup_seconds");
+        if (fresh) {
+            ultimateSleep$runTotal = ultimateSleep$remaining;
+            ultimateSleep$runStartTick = gameTime;
+            UltimateSleep.LOGGER.info(String.format(
+                    "[UltimateSleep] progression start: catching up %d ticks over ~%ds",
+                    ultimateSleep$remaining, Math.max(seconds, 0)));
+        } else {
+            ultimateSleep$runTotal += ticksSlept;
+        }
         if (seconds <= 0) {
             ultimateSleep$slice = 0L; // 0 = unlimited slice
         } else {

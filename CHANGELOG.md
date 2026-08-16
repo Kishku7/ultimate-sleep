@@ -3,6 +3,27 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.1] - 2026-08-15 (full matrix)
+
+Makes the 1.3.0 catch-up observable. No behaviour change to the catch-up itself.
+
+### Added
+- **`progression start` / `progression end` log lines** (INFO, once per catch-up, mod and plugin),
+  mirroring the `ACCELERATE start` / `ACCELERATE end` pair the engine already logs:
+  `progression start: catching up 9847 ticks over ~10s` /
+  `progression end: applied 9847 ticks over 197 server ticks (9.9s)`.
+  An admin who changes `progression_catchup_seconds` can now see it take effect.
+
+### Why it exists
+Building the catch-up smoketest gate proved the window has **no external observable**: the
+random-tick boost is applied and restored INSIDE a single tick body, so a console
+`gamerule random_tick_speed` query -- which can only run between ticks -- reads the world's own
+value every time, mid-catch-up included. Sampling it measures nothing, and a permissive parser
+turns that nothing into numbers. Crop growth is no better: it is stochastic, and a single wheat
+block needs ~7 successful random ticks, which one night of catch-up does not reliably deliver.
+So the only honest way to assert "the night was SPREAD, not applied in one tick" is for the mod to
+say so. The gate now measures the window from these two lines, and the same lines are what an
+operator reads on a live server.
 ## [1.3.0] - 2026-08-15 (full matrix)
 
 World progression no longer lands in a single tick, and it no longer scales with the world's

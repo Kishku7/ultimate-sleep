@@ -110,6 +110,12 @@ cost.
 - **Smelting** -- furnaces, smokers, blast furnaces continue.
 - **Despawn timers** -- item/entity despawn timers advance (off by default).
 
+The catch-up is **spread over real time** rather than applied in the tick that skips the night, so
+a sleep never stalls the server. `progression_catchup_seconds` (default 10) sets how long the world
+takes to settle; the amount of growth is identical either way, and it is computed from vanilla's
+random-tick rate, so raising `randomTickSpeed` for your own reasons does not raise the cost of
+sleeping. Set it to 0 for the old apply-it-all-at-once behaviour.
+
 ### Sleeper visibility & feedback
 
 - **Sleep status in chat** (`show_sleepers_in_chat`) -- a concise broadcast as players start/stop
@@ -173,6 +179,7 @@ opt-in, home bed) is runtime player data, not in this global table.
 | progress_animal_husbandry | bool | true |
 | progress_smelting | bool | true |
 | progress_despawn_timers | bool | false |
+| progression_catchup_seconds | int | 10 |
 | auto_sleep_enabled | bool | true |
 | afk_threshold_seconds | int | 180 |
 | provide_afk_command | bool | true |

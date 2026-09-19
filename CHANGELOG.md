@@ -3,6 +3,35 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.0] - 2026-09-18 (26.3 cells only)
+
+### Added
+- **NeoForge support on MC 26.3.** The 26 NeoForge matrix stopped at 26.2 under a "no NeoForge exists
+  for 26.3 yet" note. It does exist (now `26.3.0.6-beta`), and the real obstacle was ModDevGradle:
+  on 2.0.141 the NFRT `:createMinecraftArtifacts` recompile dies inside Minecraft's own source --
+  NeoForge's access transformer widens `HolderSet.Named.contents()` to public and the widening is not
+  propagated to the anonymous subclass `HolderSet.emptyNamed` returns, so javac rejects the recompiled
+  game before a line of mod source is compiled. That failure reads exactly like a broken loader, which
+  is how it got recorded as a gap. MDG 2.0.147 builds the identical cell clean. This closes the last
+  loader gap on the 26.3 line: Fabric and NeoForge both ship.
+
+### Changed
+- **26.3 cell moved from MC 26.3-snapshot-7 to MC 26.3 (stable, 2026-09-15).** The snapshot-exclusive
+  single-build pin is replaced by the ordinary closed prerelease-inclusive range `>=26.3- <26.4`
+  (Fabric) / `[26.3,26.4)` (NeoForge). Resource `pack_format` `95` -> `97`, read from 26.3's own
+  `resources/version.json`.
+- fabric-api `0.156.2+26.3` -> `0.161.0+26.3`, fabric-loader `0.19.3` -> `0.19.5`,
+  NeoForge `26.3.0.6-beta`, ModDevGradle `2.0.147`.
+
+### Notes
+- **No source change required.** The sleeping APIs this mod rides were re-checked: the 4-argument
+  `startSleepInBed` (26.3-snapshot-4) and `startSleeping` going void -> boolean (26.3-snapshot-6) were
+  already handled for the snapshot-7 jar, and nothing in the pre-1 -> release span touches them. The
+  only `CommandSourceStack` contact is `ServerPlayer.createCommandSourceStack()`, whose own signature
+  is unchanged, so the pre-1 constructor argument drop does not reach this mod.
+- The Bukkit plugin cell was NOT rebuilt and keeps 1.3.1: one plugin jar spans many MC versions
+  through its `api-version`, so it does not follow the per-26.X model the mod jars do.
+
 ## [1.3.1] - 2026-08-15 (full matrix)
 
 Makes the 1.3.0 catch-up observable. No behaviour change to the catch-up itself.

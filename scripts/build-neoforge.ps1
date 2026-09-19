@@ -1,7 +1,7 @@
 # build-neoforge.ps1 -- Ultimate Sleep: builds ALL NeoForge cells (pre-26 walkers + the 26-line driver).
 # Usage: .\build-neoforge.ps1                    -> everything
 #        .\build-neoforge.ps1 -Only 1.21.5,26.1  -> filter (pre-26 cell names and/or 26.X line keys)
-# NOTE: no NeoForge exists for 26.3 yet (legitimate gap; matrix updated when upstream ships).
+# NOTE: the 26 line now covers 26.1 / 26.2 / 26.3.
 param([string[]]$Only)
 $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot -Parent
@@ -44,6 +44,12 @@ $cell26 = Join-Path $neo "26"
 $matrix = [ordered]@{
   "26.1" = @{ mc="26.1.2"; neo="26.1.2.87";     neoRange="[26.1,)";           mcRange="[26.1,26.2)"; pf="84" }
   "26.2" = @{ mc="26.2";   neo="26.2.0.35-beta"; neoRange="[26.2.0.0-beta,)";  mcRange="[26.2,26.3)"; pf="88" }
+  # 26.3 NeoForge EXISTS (26.3.0.6-beta). The blocker was ModDevGradle, not the loader: on 2.0.141 the
+  # NFRT :createMinecraftArtifacts recompile fails inside Minecraft's OWN source (NeoForge's access
+  # transformer widens HolderSet.Named.contents() to public and the widening is not propagated to the
+  # anonymous subclass HolderSet.emptyNamed returns), before any mod source is compiled. MDG 2.0.147
+  # builds it clean -- bumped in NeoForge/26/gradle.properties.
+  "26.3" = @{ mc="26.3";   neo="26.3.0.6-beta";  neoRange="[26.3.0-alpha,)";  mcRange="[26.3,26.4)"; pf="97" }
 }
 $modver = (Select-String -Path (Join-Path $cell26 "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
 foreach ($v in $matrix.Keys) {

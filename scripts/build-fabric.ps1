@@ -43,7 +43,10 @@ $cell26 = Join-Path $fabric "26"
 $matrix = [ordered]@{
   "26.1" = @{ mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; lo="26.1-"; hi="26.2"; pf="84"; modver="1.3.1" }
   "26.2" = @{ mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; lo="26.2-"; hi="26.3"; pf="88"; modver="1.3.1" }
-  "26.3" = @{ mc="26.3-snapshot-7"; api="0.156.2+26.3";   loader="0.19.3"; lo="26.3-alpha.7"; hi="26.3-alpha.8"; pf="95"; modver="1.3.1" }
+  # 26.3 went STABLE 2026-09-15: the snapshot-exclusive window (lo/hi = 26.3-alpha.7/26.3-alpha.8) is
+  # replaced by the ordinary closed prerelease-inclusive range. pack_format 97 is READ from 26.3's own
+  # resources/version.json -- the ladder ran 89..95 across the snapshots then jumped TWO to 97 at pre-1.
+  "26.3" = @{ mc="26.3";            api="0.161.0+26.3";   loader="0.19.5"; lo="26.3-";        hi="26.4";          pf="97"; modver="1.4.0" }
 }
 $modver = (Select-String -Path (Join-Path $cell26 "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
 foreach ($v in $matrix.Keys) {

@@ -4,7 +4,11 @@ import com.kishku7.ultimatesleep.compat.Era;
 
 import com.kishku7.ultimatesleep.UltimateSleep;
 import com.kishku7.ultimatesleep.config.Settings;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,18 +20,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.UnaryOperator;
 
 /**
  * VOTE-mode sleep voting.
- *
+ * <p>
  * Core principle: being in bed IS a YES. A sleeping player (incl. auto-sleep and a Travelers'
  * Backpack sleeping bag) is recorded as a YES automatically -- no command, no client mod. The vote
  * only exists to ask the players who are still AWAKE whether to skip without them.
- *
+ * <p>
  * The prompt is NON-BLOCKING: it is shown on the action bar (the line above the hotbar), pushed by
  * the server, so it never grabs the cursor or freezes the game -- a player mid-fight can ignore it
  * and vote with /usleep yes|no when it's safe. This works identically for vanilla (no-mod) clients.
- *
+ * <p>
  *  - First sleeper, everyone eligible already in bed -> skip immediately, no vote.
  *  - Otherwise a vote opens; sleepers are auto-YES; getting into bed mid-vote is an auto-YES; the
  *    vote finishes EARLY once everyone eligible has decided, else at the window's end.
@@ -77,8 +82,7 @@ public final class VoteManager {
             if (lockedTonight.contains(p.getUUID())) {
                 // Locked this night after losing a vote: keep them out of bed, don't count them.
                 p.stopSleepInBed(false, true);
-                p.sendSystemMessage(Component.literal(
-                        "[Ultimate Sleep] You're locked out of sleep until morning -- your sleep vote failed."));
+                playerSendMessage(p,"You're locked out of sleep until morning -- your sleep vote failed.");
                 continue;
             }
             sleepers.add(p);
@@ -98,8 +102,7 @@ public final class VoteManager {
             startTick = now;
             votes.clear();
             for (ServerPlayer s : sleepers) votes.put(s.getUUID(), true); // auto-yes the starter(s)
-            broadcast(server, "A sleep vote has started -- /usleep yes or /usleep no ("
-                    + settings.integer("vote_duration_seconds") + "s).");
+            broadcastVoteStarted(server);
             sendPrompt(players, now);
             return;
         }
@@ -133,12 +136,12 @@ public final class VoteManager {
             StringBuilder beds = new StringBuilder();
             for (ServerPlayer p : players) {
                 if (p.isSleeping() && !p.isSpectator()) {
-                    if (beds.length() > 0) beds.append(", ");
+                    if (!beds.isEmpty()) beds.append(", ");
                     beds.append(p.getName().getString());
                 }
             }
             text += "  [Yes " + yes + " / No " + no
-                    + (beds.length() > 0 ? "; in bed: " + beds : "") + "]";
+                    + (!beds.isEmpty() ? "; in bed: " + beds : "") + "]";
         }
         Component msg = Component.literal(text);
         for (ServerPlayer p : players) {
@@ -174,23 +177,23 @@ public final class VoteManager {
 
     public void castVote(ServerPlayer p, boolean yes) {
         if (!"VOTE".equals(settings.string("requirement_mode"))) {
-            p.sendSystemMessage(Component.literal("[Ultimate Sleep] Vote mode is not enabled."));
+            playerSendMessage(p,"Vote mode is not enabled.");
             return;
         }
         if (lockedTonight.contains(p.getUUID())) {
-            p.sendSystemMessage(Component.literal("[Ultimate Sleep] You're locked out of sleep votes until morning."));
+            playerSendMessage(p,"You're locked out of sleep votes until morning.");
             return;
         }
         if (!active) {
-            p.sendSystemMessage(Component.literal("[Ultimate Sleep] No sleep vote is active."));
+            playerSendMessage(p,"No sleep vote is active.");
             return;
         }
         if (UltimateSleep.afk().isAfk(p.getUUID())) {
-            p.sendSystemMessage(Component.literal("[Ultimate Sleep] AFK players can't vote."));
+            playerSendMessage(p,"AFK players can't vote.");
             return;
         }
         votes.put(p.getUUID(), yes);
-        p.sendSystemMessage(Component.literal("[Ultimate Sleep] Vote recorded: " + (yes ? "YES" : "NO") + "."));
+        playerSendMessage(p,"Vote recorded: " + (yes ? "YES" : "NO") + ".");
     }
 
     private void finishVote(MinecraftServer server, List<ServerPlayer> players) {
@@ -215,9 +218,9 @@ public final class VoteManager {
         for (Map.Entry<UUID, Boolean> e : votes.entrySet()) {
             ServerPlayer voter = server.getPlayerList().getPlayer(e.getKey());
             if (voter != null) {
-                voter.sendSystemMessage(Component.literal(e.getValue() == pass
-                        ? "[Ultimate Sleep] Your sleep vote carried."
-                        : "[Ultimate Sleep] You were outvoted."));
+                playerSendMessage(voter,e.getValue() == pass
+                        ? "Your sleep vote carried."
+                        : "You were outvoted.");
             }
         }
 
@@ -232,8 +235,7 @@ public final class VoteManager {
                 if (p.isSleeping() && !p.isSpectator()) {
                     lockedTonight.add(p.getUUID());
                     p.stopSleepInBed(false, true);
-                    p.sendSystemMessage(Component.literal(
-                            "[Ultimate Sleep] You're locked out of sleep until morning."));
+                    playerSendMessage(p,"You're locked out of sleep until morning.");
                 }
             }
         }
@@ -241,7 +243,49 @@ public final class VoteManager {
         votes.clear();
     }
 
+    private void playerSendMessage(ServerPlayer p, String m){
+        p.sendSystemMessage(Component.literal("[Ultimate Sleep] "+m)
+                .withStyle(style -> style.withColor(ChatFormatting.GOLD)));
+    }
+
     private void broadcast(MinecraftServer server, String m) {
-        server.getPlayerList().broadcastSystemMessage(Component.literal("[Ultimate Sleep] " + m), false);
+        broadcast(server, component ->
+                component.append(Component.literal(" "+m)));
+    }
+
+    private void broadcast(
+            MinecraftServer server,
+            UnaryOperator<MutableComponent> transform) {
+
+        Component message = transform.apply(Component.literal("[Ultimate Sleep]")
+                .withStyle(style -> style.withColor(ChatFormatting.GOLD)));
+
+        server.getPlayerList().broadcastSystemMessage(message, false);
+    }
+
+    private void broadcastVoteStarted(MinecraftServer server) {
+        int seconds = settings.integer("vote_duration_seconds");
+
+        Component yesButton = Component.literal("[YES]")
+                .withStyle(style -> style
+                        .withColor(ChatFormatting.GREEN)
+                        .withBold(true)
+                        .withClickEvent(new ClickEvent.RunCommand("/usleep yes"))
+                        .withHoverEvent(new HoverEvent.ShowText(
+                                Component.literal("Vote YES"))));
+
+        Component noButton = Component.literal("[NO]")
+                .withStyle(style -> style
+                        .withColor(ChatFormatting.RED)
+                        .withBold(true)
+                        .withClickEvent(new ClickEvent.RunCommand("/usleep no"))
+                        .withHoverEvent(new HoverEvent.ShowText(
+                                Component.literal("Vote NO"))));
+        broadcast(server, component ->
+            component.append(Component.literal(" A sleep vote has started ("+ seconds + "s). ")
+                .withStyle(ChatFormatting.GOLD))
+                .append(yesButton)
+                .append(Component.literal(" "))
+                .append(noButton));
     }
 }

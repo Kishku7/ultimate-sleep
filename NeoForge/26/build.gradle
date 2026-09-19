@@ -39,7 +39,8 @@ processResources {
     filesMatching('META-INF/neoforge.mods.toml') { expand(ep) }
     // 26.x resource pack_format is > 81, so the strict datapack codec DEMANDS min_format/max_format;
     // a plain int FATALs NeoForge dedicated-server datapack load. Ship the exact-single range form,
-    // value injected per 26.X by the build script (PACK_FORMAT env). See Memory/knowledge/pack-formats.md.
+    // value injected per 26.X by the build script (PACK_FORMAT env), read from that MC build's
+// own resources/version.json.
     filesMatching('pack.mcmeta') { expand "packFormat": packFormat }
 }
 

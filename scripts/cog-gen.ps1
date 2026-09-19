@@ -26,7 +26,8 @@ $modernNet = $v -ge [version]'1.20.5'
 $is26      = $v.Major -ge 26
 $legacyMixinCap = ($flavour -ne 'fabric') -and ($v -lt [version]'1.21.2')  # Forge51/neo21.0 bundle Mixin 0.8.5
 
-# resource pack_format per version (Memory/knowledge/pack-formats.md; range form REQUIRED > 64)
+# resource pack_format per version, read from each MC build's own resources/version.json
+# (range form REQUIRED > 64)
 $packFormats = @{
   '1.20'='15'; '1.20.1'='15'; '1.20.2'='18'; '1.20.3'='22'; '1.20.4'='22'
   '1.20.5'='32'; '1.20.6'='32'; '1.21'='34'; '1.21.1'='34'; '1.21.2'='42'; '1.21.3'='42'

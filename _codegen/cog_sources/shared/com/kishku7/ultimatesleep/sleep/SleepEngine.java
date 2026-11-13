@@ -220,7 +220,10 @@ public final class SleepEngine {
         List<ServerPlayer> newlySleeping = new ArrayList<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (p.isSpectator()) continue;
-            if (excludeAfk && UltimateSleep.afk().isAfk(p.getUUID())) continue;
+            // AFK players are left out of the requirement, but one who is IN A BED must still count:
+            // AfkManager keeps AFK set while asleep, so dropping a sleeping AFK player left a lone,
+            // idle, auto-slept player invisible (0 eligible, 0 sleeping) and the night never skipped.
+            if (excludeAfk && !p.isSleeping() && UltimateSleep.afk().isAfk(p.getUUID())) continue;
             eligible++;
             if (p.isSleeping()) {
                 sleepCount++;

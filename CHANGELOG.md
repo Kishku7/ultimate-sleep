@@ -3,6 +3,16 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.1] - 2026-11-13 (all cells)
+
+### Fixed
+- **A lone AFK player in bed never skipped the night.** `SleepEngine` dropped every AFK player from the
+  count before it looked at whether they were in a bed, and `AfkManager` deliberately keeps AFK set while
+  asleep. So a player who went idle (180 s) and was then put to bed by auto-sleep at dusk was invisible:
+  0 eligible, 0 sleeping, 1 required, no skip and no "is sleeping" line -- the night only passed once they
+  moved again. An AFK player who is asleep now counts as a sleeper; AFK players who are not in a bed are
+  still left out of the requirement. Same change in the Paper/Folia plugin engine.
+
 ## [1.4.0] - 2026-09-18 (26.3 cells only)
 
 ### Added

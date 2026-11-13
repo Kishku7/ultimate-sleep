@@ -179,7 +179,9 @@ public final class SleepEngine {
         List<Player> newlySleeping = new ArrayList<>();
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (p.getGameMode() == GameMode.SPECTATOR) continue;
-            if (excludeAfk && plugin.afk().isAfk(p.getUniqueId())) continue;
+            // An AFK player who is in a bed still counts (see the mod engine): otherwise a lone idle
+            // sleeper is invisible and the night never skips.
+            if (excludeAfk && !p.isSleeping() && plugin.afk().isAfk(p.getUniqueId())) continue;
             eligible++;
             if (p.isSleeping()) {
                 sleepCount++;

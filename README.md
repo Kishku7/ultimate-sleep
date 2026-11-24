@@ -231,7 +231,7 @@ configuration without handing out vanilla operator.
 ## Source code
 
 The full multi-loader source (with build instructions) lives on the
-[`minecraft-1.20-26.3` branch](https://github.com/Kishku7/ultimate-sleep (build guide: `BUILDING.md`)).
+[Kishku7/ultimate-sleep](https://github.com/Kishku7/ultimate-sleep) (build guide: `BUILDING.md`).
 
 ## Report issues / Support
 

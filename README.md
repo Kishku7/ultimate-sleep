@@ -236,7 +236,7 @@ The full multi-loader source (with build instructions) lives on the
 ## Report issues / Support
 
 Please file bug reports and feature requests at the shared support hub:
-**https://github.com/Kishku7/mod_support**
+[https://github.com/Kishku7/mod_support](https://github.com/Kishku7/mod_support)
 
 ## License
 

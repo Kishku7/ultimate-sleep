@@ -3,6 +3,12 @@
 All notable changes to Ultimate Sleep are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.5.0] - 2026-11-24 (Fabric 26.4 cell only)
+
+### Added
+- **Minecraft 26.4 (pre-release 1) support on Fabric.** New 26.4 cell, pinned to 26.4-pre-1 (pack_format 104). The jar
+  accepts 26.4-pre.1 only, like every pre-release build of a new line; the other lines are not rebuilt.
+
 ## [1.4.1] - 2026-11-13 (all cells)
 
 ### Fixed

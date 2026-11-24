@@ -3,13 +3,12 @@ package com.kishku7.ultimatesleep.command;
 import com.kishku7.ultimatesleep.UltimateSleep;
 import com.kishku7.ultimatesleep.config.Settings;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -25,24 +24,24 @@ public final class UltimateSleepCommands {
     private UltimateSleepCommands() {}
 
     /** Tab-complete setting keys. */
-    private static final SuggestionProvider<CommandSourceStack> KEY_SUGGESTIONS = (ctx, builder) ->
-            SharedSuggestionProvider.suggest(UltimateSleep.settings().all().keySet(), builder);
+    private static final SuggestionProvider<CommandSourceStack> KEY_SUGGESTIONS = CommandCompat.provider((ctx, builder) ->
+            CommandCompat.suggest(UltimateSleep.settings().all().keySet(), builder));
 
     /** Tab-complete values for the key already typed (bool/enum only). */
-    private static final SuggestionProvider<CommandSourceStack> VALUE_SUGGESTIONS = (ctx, builder) -> {
+    private static final SuggestionProvider<CommandSourceStack> VALUE_SUGGESTIONS = CommandCompat.provider((ctx, builder) -> {
         try {
-            Settings.Entry e = UltimateSleep.settings().get(StringArgumentType.getString(ctx, "key"));
+            Settings.Entry e = UltimateSleep.settings().get(CommandCompat.getString(ctx, "key"));
             if (e != null && e.type == Settings.Type.BOOL) {
-                return SharedSuggestionProvider.suggest(List.of("true", "false"), builder);
+                return CommandCompat.suggest(List.of("true", "false"), builder);
             }
             if (e != null && e.type == Settings.Type.ENUM) {
-                return SharedSuggestionProvider.suggest(e.allowed, builder);
+                return CommandCompat.suggest(e.allowed, builder);
             }
         } catch (Exception ignored) {
             // key not parsed yet -> no value suggestions
         }
         return builder.buildFuture();
-    };
+    });
 
     public static LiteralCommandNode<CommandSourceStack> register(CommandDispatcher<CommandSourceStack> dispatcher) {
         return dispatcher.register(Commands.literal("usleep")
@@ -53,29 +52,48 @@ public final class UltimateSleepCommands {
                 .then(Commands.literal("auto").executes(UltimateSleepCommands::toggleAuto))
                 .then(Commands.literal("yes").executes(ctx -> vote(ctx, true)))
                 .then(Commands.literal("no").executes(ctx -> vote(ctx, false)))
-                .then(Commands.literal("set")
-                        .requires(src -> UltimateSleep.permissions().canSet(src))
-                        .then(Commands.argument("key", StringArgumentType.word()).suggests(KEY_SUGGESTIONS)
-                                .then(Commands.argument("value", StringArgumentType.greedyString()).suggests(VALUE_SUGGESTIONS)
-                                        .executes(UltimateSleepCommands::doSet))))
-                .then(Commands.literal("admin")
-                        .requires(src -> UltimateSleep.permissions().canAdmin(src))
+                .then(CommandCompat.requires(Commands.literal("set"), src -> UltimateSleep.permissions().canSet(src))
+                        .then(Commands.argument("key", CommandCompat.word()).suggests(KEY_SUGGESTIONS)
+                                .then(Commands.argument("value", CommandCompat.greedy()).suggests(VALUE_SUGGESTIONS)
+                                        .executes(setter(UltimateSleepCommands::doSet)))))
+                .then(CommandCompat.requires(Commands.literal("admin"), src -> UltimateSleep.permissions().canAdmin(src))
                         .then(Commands.literal("set")
-                                .then(Commands.argument("key", StringArgumentType.word()).suggests(KEY_SUGGESTIONS)
-                                        .then(Commands.argument("value", StringArgumentType.greedyString()).suggests(VALUE_SUGGESTIONS)
-                                                .executes(UltimateSleepCommands::doSet))))
+                                .then(Commands.argument("key", CommandCompat.word()).suggests(KEY_SUGGESTIONS)
+                                        .then(Commands.argument("value", CommandCompat.greedy()).suggests(VALUE_SUGGESTIONS)
+                                                .executes(admin(UltimateSleepCommands::doSet)))))
                         .then(Commands.literal("afk")
-                                .then(Commands.argument("player", StringArgumentType.word())
-                                        .executes(UltimateSleepCommands::adminAfk)))
+                                .then(Commands.argument("player", CommandCompat.word())
+                                        .executes(admin(UltimateSleepCommands::adminAfk))))
                         .then(Commands.literal("admins")
                                 .then(Commands.literal("add")
-                                        .then(Commands.argument("player", StringArgumentType.word())
-                                                .executes(UltimateSleepCommands::adminsAdd)))
+                                        .then(Commands.argument("player", CommandCompat.word())
+                                                .executes(admin(UltimateSleepCommands::adminsAdd))))
                                 .then(Commands.literal("remove")
-                                        .then(Commands.argument("player", StringArgumentType.word())
-                                                .executes(UltimateSleepCommands::adminsRemove)))
+                                        .then(Commands.argument("player", CommandCompat.word())
+                                                .executes(admin(UltimateSleepCommands::adminsRemove))))
                                 .then(Commands.literal("list")
-                                        .executes(UltimateSleepCommands::adminsList)))));
+                                        .executes(admin(UltimateSleepCommands::adminsList))))));
+    }
+
+    /**
+     * Permission guards re-checked at run time. From 26.4 a node cannot carry a requires() lambda, so
+     * the executor is where the real gate lives; on older versions it simply repeats the node check.
+     */
+    private static Command<CommandSourceStack> setter(Command<CommandSourceStack> run) {
+        return ctx -> guarded(ctx, run, UltimateSleep.permissions().canSet(ctx.getSource()));
+    }
+
+    private static Command<CommandSourceStack> admin(Command<CommandSourceStack> run) {
+        return ctx -> guarded(ctx, run, UltimateSleep.permissions().canAdmin(ctx.getSource()));
+    }
+
+    private static int guarded(CommandContext<CommandSourceStack> ctx, Command<CommandSourceStack> run, boolean allowed)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        if (!allowed) {
+            ctx.getSource().sendSystemMessage(Component.literal("[Ultimate Sleep] You do not have permission to use that."));
+            return 0;
+        }
+        return run.run(ctx);
     }
 
     private static String shown(Settings.Entry e) {
@@ -158,8 +176,8 @@ public final class UltimateSleepCommands {
 
     private static int doSet(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        String key = StringArgumentType.getString(ctx, "key");
-        String value = StringArgumentType.getString(ctx, "value");
+        String key = CommandCompat.getString(ctx, "key");
+        String value = CommandCompat.getString(ctx, "value");
         String err = UltimateSleep.settings().setRaw(key, value);
         if (err != null) {
             src.sendSystemMessage(Component.literal("[Ultimate Sleep] " + err));
@@ -173,7 +191,7 @@ public final class UltimateSleepCommands {
 
     private static int adminAfk(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        String name = StringArgumentType.getString(ctx, "player");
+        String name = CommandCompat.getString(ctx, "player");
         ServerPlayer target = src.getServer() == null
                 ? null : src.getServer().getPlayerList().getPlayerByName(name);
         if (target == null) {
@@ -187,7 +205,7 @@ public final class UltimateSleepCommands {
 
     private static int adminsAdd(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        String name = StringArgumentType.getString(ctx, "player");
+        String name = CommandCompat.getString(ctx, "player");
         boolean added = UltimateSleep.permissions().addAdmin(name);
         src.sendSystemMessage(Component.literal(added
                 ? "[Ultimate Sleep] " + name + " is now a sleep-admin."
@@ -197,7 +215,7 @@ public final class UltimateSleepCommands {
 
     private static int adminsRemove(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        String name = StringArgumentType.getString(ctx, "player");
+        String name = CommandCompat.getString(ctx, "player");
         boolean removed = UltimateSleep.permissions().removeAdmin(name);
         src.sendSystemMessage(Component.literal(removed
                 ? "[Ultimate Sleep] removed sleep-admin " + name + "."

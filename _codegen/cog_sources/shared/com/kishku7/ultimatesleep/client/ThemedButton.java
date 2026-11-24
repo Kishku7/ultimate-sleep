@@ -39,7 +39,16 @@ public final class ThemedButton extends AbstractWidget {
     }
 
     @Override
+    //[[[cog
+    // import cog, sys; sys.path.insert(0, codegen); import compat
+    // if compat.ui264(ver):
+    //     cog.outl('    protected void extractWidgetRenderState(GuiGraphicsExtractor g) {')
+    //     cog.outl('        int mouseX = g.mouseX(), mouseY = g.mouseY();')
+    // else:
+    //     cog.outl('    protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {')
+    //]]]
     protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+    //[[[end]]]
         int x = getX(), y = getY(), w = getWidth(), h = getHeight();
         boolean hov = this.active && this.isMouseOver(mouseX, mouseY);
         int bg = !this.active ? 0xFF4A4A4A : (hov ? bgHover : bgColor);

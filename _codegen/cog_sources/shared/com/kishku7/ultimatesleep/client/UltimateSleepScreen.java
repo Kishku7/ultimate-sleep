@@ -61,7 +61,15 @@ public final class UltimateSleepScreen extends Screen {
     private int top() { return (this.height - PH) / 2; }
 
     @Override
+    //[[[cog
+    // import cog, sys; sys.path.insert(0, codegen); import compat
+    // if compat.ui264(ver):
+    //     cog.outl('    public void extractRenderState(GuiGraphicsExtractor g) {')
+    // else:
+    //     cog.outl('    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {')
+    //]]]
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+    //[[[end]]]
         int left = left(), top = top();
         g.fill(left - 2, top - 2, left + PW + 2, top + PH + 2, 0xFF000000);
         g.fill(left - 1, top - 1, left + PW + 1, top + PH + 1, 0xFF2F2F2F);
@@ -79,7 +87,15 @@ public final class UltimateSleepScreen extends Screen {
                 g.fill(sx, thumbY, sx + 2, thumbY + thumbH, 0xFF9A9A9A);
             }
         }
+    //[[[cog
+    // import cog, sys; sys.path.insert(0, codegen); import compat
+    // if compat.ui264(ver):
+    //     cog.outl('        super.extractRenderState(g);')
+    // else:
+    //     cog.outl('        super.extractRenderState(g, mouseX, mouseY, partialTick);')
+    //]]]
         super.extractRenderState(g, mouseX, mouseY, partialTick);
+    //[[[end]]]
     }
 
     private static void paintField(GuiGraphicsExtractor g, EditBox eb) {

@@ -47,6 +47,9 @@ $matrix = [ordered]@{
   # replaced by the ordinary closed prerelease-inclusive range. pack_format 97 is READ from 26.3's own
   # resources/version.json -- the ladder ran 89..95 across the snapshots then jumped TWO to 97 at pre-1.
   "26.3" = @{ mc="26.3";            api="0.161.0+26.3";   loader="0.19.5"; lo="26.3-";        hi="26.4";          pf="97"; modver="1.4.1" }
+  # 26.4 is still in pre-release: exclusive single-build window. pack_format 104 read from 26.4-pre-1's own
+  # resources/version.json (resource_major 104). lo/hi is the Fabric-normalized pre.1 .. pre.2 window.
+  "26.4" = @{ mc="26.4-pre-1";      api="0.167.1+26.4";   loader="0.19.5"; lo="26.4-pre.1"; hi="26.4-pre.2"; pf="104"; modver="1.5.0" }
 }
 $modver = (Select-String -Path (Join-Path $cell26 "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
 foreach ($v in $matrix.Keys) {

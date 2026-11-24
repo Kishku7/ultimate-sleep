@@ -151,6 +151,7 @@ if __name__ == "__main__":
 # --- snap-4 (26.3) startSleepInBed 4-arg overload: startSleepInBed(AbstractBedBlock, BlockState, BedRule, BlockPos)
 #     (26.2 and 26.3-snapshot-2 were still 1-arg (BlockPos); vanilla builds the args as below). ---
 def bed_env4(v):    return _vt(v) >= (26, 3)
+def ui264(v):       return _vt(v) >= (26, 4)           # 26.4: commands need serialisable args/suggestions, no requires() lambda; Screen/AbstractWidget extract* lose mouseX/mouseY/partialTick (read g.mouseX()/g.mouseY())
 def drop_pred(v):   return _vt(v) >= (26, 3)          # LivingEntity.drop(ItemStack, boolean) gains a trailing Prediction at 26.3-snapshot-7; PREDICTED is what vanilla passes for overflow reached from a player action
 
 def start_sleep_pre(v, indent, level, pos):
